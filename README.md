@@ -21,6 +21,44 @@ MindMatch is an Android puzzle arcade designed to sharpen memory, focus, and log
 | UX Polish | Pause/resume for every puzzle, responsive animations, tactile sound design. |
 | Bonus Ideas | Daily community challenge rotation and optional synchronous multiplayer duels. |
 
+## Delivery Plan
+
+```mermaid
+gantt
+    title MindMatch Delivery Timeline
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+    todayMarker off
+
+    section Foundation & Scaffolding
+    Core architecture baseline           :done, foundation1, 2024-07-01, 3d
+    Compose navigation shell             :active, foundation2, after foundation1, 5d
+    Fake repository scaffolding          :crit, foundation3, after foundation2, 4d
+
+    section Puzzle Modes
+    Core puzzle engine & game loop       :crit, modes1, after foundation3, 7d
+    Pattern & sequence puzzles           :modes2, after modes1, 7d
+    Logic grid & focus tapper prototype  :modes3, after modes2, 7d
+
+    section Persistence & Services
+    Data schema design                   :crit, data1, after modes1, 5d
+    Room cache implementation            :data2, after data1, 7d
+    Firebase sync & conflict handling    :data3, after data2, 7d
+
+    section Social & Live Features
+    Profile flows & settings             :social1, after data2, 5d
+    Leaderboards UI & APIs               :crit, social2, after data3, 7d
+
+    section Creation Tools
+    Puzzle editor MVP                    :crit, create1, after social2, 10d
+    Publishing & moderation pipeline     :create2, after create1, 6d
+
+    section Polish, QA & Launch
+    UX polish & haptics                  :polish1, after create2, 5d
+    Beta testing & telemetry             :polish2, after polish1, 7d
+    Launch prep & store listing          :crit, launch, after polish2, 4d
+```
+
 ## Build & Run
 
 1. Install Android Studio Ladybug or newer with JDK 17.
