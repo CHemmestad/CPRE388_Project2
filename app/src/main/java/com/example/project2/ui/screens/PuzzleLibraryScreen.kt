@@ -26,7 +26,8 @@ import com.example.project2.ui.widgets.PuzzleCard
 fun PuzzleLibraryScreen(
     puzzles: List<PuzzleDescriptor>,
     progress: Map<String, PuzzleProgress>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPlayPuzzle: (PuzzleDescriptor) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -65,7 +66,8 @@ fun PuzzleLibraryScreen(
                     puzzle = puzzle,
                     progress = progress[puzzle.id],
                     actionText = "Play",
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onActionClick = { onPlayPuzzle(puzzle) }
                 )
             }
         }

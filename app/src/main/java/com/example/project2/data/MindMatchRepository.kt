@@ -80,7 +80,11 @@ class FakeMindMatchRepository : MindMatchRepository {
     }
 
     override val dailyChallenge: DailyChallenge = DailyChallenge(
-        puzzle = puzzles.first().copy(isUserCreated = true, creatorId = "community"),
+        puzzle = puzzles.first().copy(
+            id = puzzles.first().id,
+            isUserCreated = true,
+            creatorId = "community"
+        ),
         expiresAt = Instant.now().plusSeconds(60 * 60 * 18)
     )
 }
