@@ -25,6 +25,7 @@ import com.example.project2.data.DailyChallenge
 import com.example.project2.data.PlayerProfile
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleProgress
+import com.example.project2.ui.util.formatAsDisplay
 import com.example.project2.ui.widgets.PuzzleCard
 import com.example.project2.ui.widgets.StatChip
 
@@ -34,7 +35,8 @@ fun DashboardScreen(
     puzzles: List<PuzzleDescriptor>,
     progress: Map<String, PuzzleProgress>,
     dailyChallenge: DailyChallenge,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPlayPuzzle: (PuzzleDescriptor) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -43,7 +45,10 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         GreetingHeader(profile = profile)
-        DailyChallengeCard(dailyChallenge = dailyChallenge)
+        DailyChallengeCard(
+            dailyChallenge = dailyChallenge,
+            onPlayPuzzle = { onPlayPuzzle(dailyChallenge.puzzle) }
+        )
 
         Text(
             text = "Continue Playing",
@@ -59,7 +64,8 @@ fun DashboardScreen(
                     puzzle = puzzle,
                     progress = puzzleProgress,
                     actionIcon = Icons.Default.PlayArrow,
-                    actionText = "Resume"
+                    actionText = "Resume",
+                    onActionClick = { onPlayPuzzle(puzzle) }
                 )
             }
         }
@@ -101,6 +107,7 @@ private fun GreetingHeader(profile: PlayerProfile) {
 @Composable
 private fun DailyChallengeCard(
     dailyChallenge: DailyChallenge,
+    onPlayPuzzle: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -128,12 +135,12 @@ private fun DailyChallengeCard(
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                text = "Expires ${dailyChallenge.expiresAt}",
+                text = "Expires ${dailyChallenge.expiresAt.formatAsDisplay()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Button(
-                onClick = { /* TODO: Navigate into daily challenge */ },
+                onClick = onPlayPuzzle,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text("Play now")

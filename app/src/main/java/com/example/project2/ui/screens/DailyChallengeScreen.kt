@@ -15,11 +15,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.DailyChallenge
+import com.example.project2.ui.util.formatAsDisplay
 
 @Composable
 fun DailyChallengeScreen(
     challenge: DailyChallenge,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartChallenge: (DailyChallenge) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -58,12 +60,12 @@ fun DailyChallengeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Available until ${challenge.expiresAt}",
+                    text = "Available until ${challenge.expiresAt.formatAsDisplay()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Button(
-                    onClick = { /* TODO: Launch daily puzzle */ },
+                    onClick = { onStartChallenge(challenge) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Start challenge")

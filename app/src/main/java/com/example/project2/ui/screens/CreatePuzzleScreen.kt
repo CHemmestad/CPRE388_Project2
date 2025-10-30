@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.Difficulty
-import com.example.project2.data.PuzzleType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +39,7 @@ fun CreatePuzzleScreen(
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(PuzzleType.PATTERN_MEMORY) }
+    var puzzleType by remember { mutableStateOf("") }
     var selectedDifficulty by remember { mutableStateOf(Difficulty.MEDIUM) }
     var adaptiveRules by remember { mutableStateOf("") }
 
@@ -83,24 +82,15 @@ fun CreatePuzzleScreen(
                         .wrapContentHeight()
                 )
 
-                Text(
-                    text = "Puzzle type",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    PuzzleType.entries.forEach { type ->
-                        FilterChip(
-                            selected = type == selectedType,
-                            onClick = { selectedType = type },
-                            label = { Text(type.displayName) }
-                        )
+                OutlinedTextField(
+                    value = puzzleType,
+                    onValueChange = { puzzleType = it },
+                    label = { Text("Puzzle type") },
+                    modifier = Modifier.fillMaxWidth(),
+                    supportingText = {
+                        Text("e.g., Pattern Memory, Logic Grid, Sequence Recall")
                     }
-                }
+                )
 
                 Text(
                     text = "Base difficulty",
@@ -153,11 +143,11 @@ fun CreatePuzzleScreen(
             }
             Button(
                 modifier = Modifier.weight(1f),
-                onClick = { /* TODO: Publish to cloud */ }
+                onClick = { /* TODO: Create puzzle and attach to profile */ }
             ) {
                 Icon(Icons.Filled.CloudUpload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Publish")
+                Text("Create")
             }
         }
     }
