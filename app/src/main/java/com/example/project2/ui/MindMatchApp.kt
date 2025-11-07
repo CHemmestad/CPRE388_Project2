@@ -191,7 +191,8 @@ fun MindMatchApp(
                 }
                 composable(MindMatchDestination.Profile.route) {
                     ProfileScreen(
-                        profile = viewModel.profile
+                        profile = viewModel.profile,
+                        onLogout = { isAuthenticated = false }
                     )
                 }
                 composable(
