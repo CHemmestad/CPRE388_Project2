@@ -1,6 +1,8 @@
 package com.example.project2.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,10 +40,12 @@ import com.example.project2.R
 fun LoginScreen(
     modifier: Modifier = Modifier,
     onLogin: () -> Unit = {},
-    onCreateAccount: () -> Unit = {}
+    onCreateAccount: () -> Unit = {},
+    onSecretAccess: () -> Unit = {}
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    val secretInteractionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier = modifier
@@ -95,6 +100,23 @@ fun LoginScreen(
             ) {
                 Text("Create an account")
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(48.dp)
+                    .clickable(
+                        interactionSource = secretInteractionSource,
+                        indication = null,
+                        onClick = onSecretAccess
+                    )
+            )
         }
     }
 }
@@ -180,6 +202,29 @@ fun CreateAccountScreen(
             ) {
                 Text("Back to log in")
             }
+        }
+    }
+}
+
+@Composable
+fun DailyChallengeGeneratorScreen(
+    modifier: Modifier = Modifier,
+    onGenerateDailyChallenge: () -> Unit = {},
+    onBackToLogin: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Button(
+            onClick = {
+                onGenerateDailyChallenge()
+                onBackToLogin()
+            }
+        ) {
+            Text("Generate Daily Challenge")
         }
     }
 }
