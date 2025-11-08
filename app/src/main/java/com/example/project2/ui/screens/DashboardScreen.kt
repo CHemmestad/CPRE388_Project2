@@ -36,7 +36,8 @@ fun DashboardScreen(
     progress: Map<String, PuzzleProgress>,
     dailyChallenge: DailyChallenge,
     modifier: Modifier = Modifier,
-    onPlayPuzzle: (PuzzleDescriptor) -> Unit = {}
+    onPlayPuzzle: (PuzzleDescriptor) -> Unit = {},
+    onViewDailyChallenge: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -47,7 +48,7 @@ fun DashboardScreen(
         GreetingHeader(profile = profile)
         DailyChallengeCard(
             dailyChallenge = dailyChallenge,
-            onPlayPuzzle = { onPlayPuzzle(dailyChallenge.puzzle) }
+            onViewChallenge = onViewDailyChallenge
         )
 
         Text(
@@ -107,7 +108,7 @@ private fun GreetingHeader(profile: PlayerProfile) {
 @Composable
 private fun DailyChallengeCard(
     dailyChallenge: DailyChallenge,
-    onPlayPuzzle: () -> Unit
+    onViewChallenge: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -140,7 +141,7 @@ private fun DailyChallengeCard(
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Button(
-                onClick = onPlayPuzzle,
+                onClick = onViewChallenge,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text("Play now")
