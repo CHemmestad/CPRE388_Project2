@@ -1,5 +1,6 @@
 package com.example.project2.data
 
+import com.google.firebase.Timestamp
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -15,7 +16,7 @@ data class PlayerProfile(
     val avatarUrl: String? = null,
     val bio: String = "",
     val preferredDifficulty: Difficulty = Difficulty.MEDIUM,
-    val createdAt: Instant = Instant.now()
+    val createdAt: Timestamp = Timestamp.now()
 )
 
 data class PuzzleDescriptor(
