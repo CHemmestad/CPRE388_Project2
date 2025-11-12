@@ -235,7 +235,7 @@ fun CreateAccountScreen(
                         return@Button
                     }
 
-                    authRepo.signUp(email, password, displayName) { success, error ->
+                    authRepo.signUp(email, password, displayName,context) { success, error ->
                         Log.d("AuthDebug", "signUp callback triggered: success=$success, error=$error")
                         if (success) {
                             val uid = authRepo.getCurrentUserId() ?: return@signUp

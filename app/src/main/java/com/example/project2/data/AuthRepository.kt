@@ -1,11 +1,15 @@
 package com.example.project2.data
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.time.Instant
+
 
 /**
  * Handles Firebase Authentication and Firestore operations for user accounts.
@@ -22,6 +26,7 @@ class AuthRepository {
         email: String,
         password: String,
         displayName: String,
+        context: Context,
         onResult: (Boolean, String?) -> Unit
     ) {
         Log.d("AuthDebug", "signUp() started for $email")
@@ -29,7 +34,7 @@ class AuthRepository {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 Log.d("AuthDebug", "addOnCompleteListener triggered: success=${task.isSuccessful}")
-
+                Toast.makeText(context, "Sign Up Successful, go back to Login!", Toast.LENGTH_SHORT).show()
                 if (task.isSuccessful) {
                     val firebaseUser = auth.currentUser
                     if (firebaseUser == null) {
