@@ -45,8 +45,10 @@ import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleType
 import com.example.project2.ui.screens.CreateAccountScreen
 import com.example.project2.ui.screens.CreatePuzzleScreen
+import com.example.project2.ui.screens.DailyChallengePlayScreen
 import com.example.project2.ui.screens.DailyChallengeScreen
 import com.example.project2.ui.screens.DashboardScreen
+import com.example.project2.ui.screens.DailyChallengeGeneratorScreen
 import com.example.project2.ui.screens.LeaderboardScreen
 import com.example.project2.ui.screens.LoginScreen
 import com.example.project2.ui.screens.PatternMemoryScreen
@@ -64,8 +66,10 @@ import androidx.compose.ui.platform.LocalContext
 private const val PUZZLE_ID_ARG = "puzzleId"
 private const val PUZZLE_PLAY_ROUTE = "puzzlePlay"
 private const val PUZZLE_PLAY_ROUTE_PATTERN = "$PUZZLE_PLAY_ROUTE/{$PUZZLE_ID_ARG}"
+private const val DAILY_PLAY_ROUTE = "dailyPlay"
 private const val AUTH_LOGIN_ROUTE = "auth_login"
 private const val AUTH_CREATE_ROUTE = "auth_create"
+private const val AUTH_SECRET_ROUTE = "auth_secret"
 
 /**
  * Top-level navigation destinations for the app.
@@ -165,7 +169,8 @@ fun MindMatchApp(
                         dailyChallenge = viewModel.dailyChallenge,
                         onPlayPuzzle = { puzzle ->
                             navController.navigate(buildPuzzlePlayRoute(puzzle.id))
-                        }
+                        },
+                        onViewDailyChallenge = { navController.navigate(DAILY_PLAY_ROUTE) }
                     )
                 }
                 composable(MindMatchDestination.Puzzles.route) {
@@ -183,8 +188,8 @@ fun MindMatchApp(
                 composable(MindMatchDestination.Daily.route) {
                     DailyChallengeScreen(
                         challenge = viewModel.dailyChallenge,
-                        onStartChallenge = { challenge ->
-                            navController.navigate(buildPuzzlePlayRoute(challenge.puzzle.id))
+                        onStartChallenge = {
+                            navController.navigate(DAILY_PLAY_ROUTE)
                         }
                     )
                 }
@@ -196,7 +201,8 @@ fun MindMatchApp(
                 }
                 composable(MindMatchDestination.Profile.route) {
                     ProfileScreen(
-                        profile = viewModel.profile
+                        profile = viewModel.profile,
+                        onLogout = { isAuthenticated = false }
                     )
                 }
                 composable(
@@ -216,6 +222,11 @@ fun MindMatchApp(
                         )
                         else -> PuzzleNotReadyScreen(puzzle = puzzle)
                     }
+                }
+                composable(DAILY_PLAY_ROUTE) {
+                    DailyChallengePlayScreen(
+                        challenge = viewModel.dailyChallenge
+                    )
                 }
             }
         }
@@ -277,11 +288,10 @@ private fun AuthNavHost(
     ) {
         composable(AUTH_LOGIN_ROUTE) {
             LoginScreen(
-                onLogin = {
-                    Toast.makeText(navController.context, "Login successful!", Toast.LENGTH_SHORT).show()
-                    onAuthenticated()
-                },
-                onCreateAccount = { navController.navigate(AUTH_CREATE_ROUTE) }
+
+                onLogin = onAuthenticated,
+                onCreateAccount = { navController.navigate(AUTH_CREATE_ROUTE) },
+                onSecretAccess = { navController.navigate(AUTH_SECRET_ROUTE) }
             )
         }
         composable(AUTH_CREATE_ROUTE) {
@@ -305,5 +315,10 @@ private fun AuthNavHost(
             )
         }
 
+        composable(AUTH_SECRET_ROUTE) {
+            DailyChallengeGeneratorScreen(
+                onBackToLogin = { navController.popBackStack() }
+            )
+        }
     }
 }
