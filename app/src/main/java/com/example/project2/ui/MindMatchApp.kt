@@ -1,6 +1,7 @@
 package com.example.project2.ui
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -57,6 +58,10 @@ import com.example.project2.ui.screens.PuzzleNotFoundScreen
 import com.example.project2.ui.screens.PuzzleNotReadyScreen
 import com.example.project2.ui.theme.CharcoalSurface
 import com.example.project2.ui.theme.RoyalBluePrimary
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.ui.platform.LocalContext
+
 
 private const val PUZZLE_ID_ARG = "puzzleId"
 private const val PUZZLE_PLAY_ROUTE = "puzzlePlay"
@@ -283,17 +288,33 @@ private fun AuthNavHost(
     ) {
         composable(AUTH_LOGIN_ROUTE) {
             LoginScreen(
+
                 onLogin = onAuthenticated,
                 onCreateAccount = { navController.navigate(AUTH_CREATE_ROUTE) },
                 onSecretAccess = { navController.navigate(AUTH_SECRET_ROUTE) }
             )
         }
         composable(AUTH_CREATE_ROUTE) {
+            val context = LocalContext.current
             CreateAccountScreen(
-                onCreateAccount = onAuthenticated,
-                onBackToLogin = { navController.popBackStack() }
+                onBackToLogin = { navController.popBackStack() },
+                onCreateAccount = {
+                    // show toast using a stable UI context
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                    }
+
+                    // give toast time to appear before navigating
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (navController.popBackStack().not()) {
+                            // fallback in case stack is empty
+                            navController.navigate(AUTH_LOGIN_ROUTE)
+                        }
+                    }, 1200)
+                }
             )
         }
+
         composable(AUTH_SECRET_ROUTE) {
             DailyChallengeGeneratorScreen(
                 onBackToLogin = { navController.popBackStack() }

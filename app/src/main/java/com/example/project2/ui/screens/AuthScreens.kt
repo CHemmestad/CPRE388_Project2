@@ -1,5 +1,9 @@
 package com.example.project2.ui.screens
 
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
@@ -30,12 +34,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.project2.R
+import com.example.project2.data.AuthRepository
 
+// ====================== LOGIN SCREEN ======================
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
@@ -43,6 +50,8 @@ fun LoginScreen(
     onCreateAccount: () -> Unit = {},
     onSecretAccess: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val authRepo = AuthRepository()
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     val secretInteractionSource = remember { MutableInteractionSource() }
@@ -62,11 +71,12 @@ fun LoginScreen(
                 contentDescription = "MindMatch logo",
                 modifier = Modifier.size(200.dp)
             )
+
             Text(
                 text = "Sign in to keep your progress, saved puzzles, and community streaks in sync.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
             OutlinedTextField(
@@ -84,7 +94,31 @@ fun LoginScreen(
             )
 
             Button(
-                onClick = onLogin,
+                onClick = {
+                    if (email.isBlank() || password.isBlank()) {
+                        Toast.makeText(context, "Please enter both email and password", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    authRepo.login(email, password) { success, error ->
+                        if (success) {
+                            val uid = authRepo.getCurrentUserId() ?: return@login
+                            authRepo.loadUserProfile(uid) { profile, err ->
+                                if (profile != null) {
+                                    Toast.makeText(context, "Welcome back, ${profile.displayName}!", Toast.LENGTH_SHORT).show()
+                                    Log.d("Auth", "Welcome back, ${profile.displayName}")
+                                    onLogin() // Navigate to dashboard
+                                } else {
+                                    Toast.makeText(context, "Error loading profile: $err", Toast.LENGTH_SHORT).show()
+                                    Log.e("Auth", "Failed to load profile: $err")
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, error ?: "Login failed", Toast.LENGTH_SHORT).show()
+                            Log.e("Auth", "Login failed: $error")
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.Person, contentDescription = null)
@@ -121,12 +155,15 @@ fun LoginScreen(
     }
 }
 
+// ====================== CREATE ACCOUNT SCREEN ======================
 @Composable
 fun CreateAccountScreen(
     modifier: Modifier = Modifier,
     onCreateAccount: () -> Unit = {},
     onBackToLogin: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val authRepo = AuthRepository()
     var displayName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -147,6 +184,7 @@ fun CreateAccountScreen(
                 contentDescription = "MindMatch logo",
                 modifier = Modifier.size(200.dp)
             )
+
             Text(
                 text = "Create your account",
                 style = MaterialTheme.typography.headlineMedium
@@ -186,7 +224,39 @@ fun CreateAccountScreen(
             )
 
             Button(
-                onClick = onCreateAccount,
+                onClick = {
+                    if (password != confirmPassword) {
+                        Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    if (password.length < 6) {
+                        Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    authRepo.signUp(email, password, displayName,context) { success, error ->
+                        Log.d("AuthDebug", "signUp callback triggered: success=$success, error=$error")
+                        if (success) {
+                            val uid = authRepo.getCurrentUserId() ?: return@signUp
+                            authRepo.loadUserProfile(uid) { profile, err ->
+                                if (profile != null) {
+                                    Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                                    Log.d("Auth", "Account created for ${profile.displayName}")
+
+                                    // 🔹 Delay navigation slightly so toast can show first
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        onCreateAccount()   // call the navigation callback properly
+                                    }, 1200)
+                                } else {
+                                    Toast.makeText(context, "Error loading profile: $err", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, error ?: "Signup failed", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.PersonAdd, contentDescription = null)
