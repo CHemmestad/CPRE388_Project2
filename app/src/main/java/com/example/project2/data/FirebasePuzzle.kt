@@ -1,6 +1,9 @@
 package com.example.project2.data
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
 
 // Firestore-friendly version of PuzzleDescriptor
 data class FirebasePuzzle(

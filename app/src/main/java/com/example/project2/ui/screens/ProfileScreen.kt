@@ -33,12 +33,12 @@ import com.example.project2.data.PlayerProfile
 
 @Composable
 fun ProfileScreen(
-    profile: PlayerProfile,
+    profile: PlayerProfile?,
     modifier: Modifier = Modifier,
     onLogout: () -> Unit = {}
 ) {
-    var displayName by remember(profile.id) { mutableStateOf(profile.displayName) }
-    var bio by remember(profile.id) { mutableStateOf(profile.bio) }
+    var displayName by remember(profile!!.id) { mutableStateOf(profile!!.displayName) }
+    var bio by remember(profile.id) { mutableStateOf(profile!!.bio) }
 
     Column(
         modifier = modifier

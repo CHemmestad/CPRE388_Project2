@@ -1,40 +1,39 @@
 package com.example.project2.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.project2.data.DailyChallenge
-import com.example.project2.data.DailyPuzzleContent
-import com.example.project2.data.PuzzleCell
-import com.example.project2.data.PuzzleCellState
-import com.example.project2.data.PuzzleControl
-import com.example.project2.data.PuzzleStats
+import com.example.project2.data.*
 import com.example.project2.ui.util.formatAsDisplay
 
 @Composable
 fun DailyChallengePlayScreen(
-    challenge: DailyChallenge,
+    challenge: DailyChallenge?,      // <-- ACCEPT NULL
     modifier: Modifier = Modifier
 ) {
+    // 1️⃣ Loading or null state
+    if (challenge == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Loading daily challenge...")
+        }
+        return
+    }
+
+    // 2️⃣ Extract content safely
+    val content = challenge.content
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -42,7 +41,6 @@ fun DailyChallengePlayScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val content = challenge.content
         Text(
             text = "Daily Challenge",
             style = MaterialTheme.typography.headlineMedium,
@@ -54,8 +52,11 @@ fun DailyChallengePlayScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+
         PuzzleStatusRow(challenge = challenge)
+
         PuzzleScoreStrip(stats = content.stats)
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -138,6 +139,7 @@ private fun PuzzleCellView(
         PuzzleCellState.Disabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
         PuzzleCellState.Neutral -> MaterialTheme.colorScheme.surfaceBright
     }
+
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -167,6 +169,7 @@ private fun PuzzleScoreStrip(stats: PuzzleStats) {
 @Composable
 private fun PuzzleControlRow(controls: List<PuzzleControl>) {
     if (controls.isEmpty()) return
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -178,8 +181,10 @@ private fun PuzzleControlRow(controls: List<PuzzleControl>) {
                     .widthIn(min = 88.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(
-                        if (control.isPrimary) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        if (control.isPrimary)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -208,7 +213,9 @@ private fun MiniStat(label: String, value: String) {
 }
 
 @Composable
-private fun PuzzleStatusRow(challenge: DailyChallenge) {
+private fun PuzzleStatusRow(challenge: DailyChallenge?) {
+    if (challenge == null) return  // <-- SAFETY FIX
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)

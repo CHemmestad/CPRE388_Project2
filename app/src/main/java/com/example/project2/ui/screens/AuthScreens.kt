@@ -40,6 +40,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.project2.R
+import com.example.project2.data.AuthRepository
 
 // ====================== LOGIN SCREEN ======================
 @Composable

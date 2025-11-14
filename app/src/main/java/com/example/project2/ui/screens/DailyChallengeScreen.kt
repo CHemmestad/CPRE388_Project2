@@ -19,7 +19,7 @@ import com.example.project2.ui.util.formatAsDisplay
 
 @Composable
 fun DailyChallengeScreen(
-    challenge: DailyChallenge,
+    challenge: DailyChallenge?,
     modifier: Modifier = Modifier,
     onStartChallenge: (DailyChallenge) -> Unit = {}
 ) {
@@ -46,26 +46,38 @@ fun DailyChallengeScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = challenge.puzzle.title,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(
-                    text = challenge.puzzle.description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "Type: ${challenge.puzzle.type.displayName} · Difficulty: ${challenge.puzzle.difficulty}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Available until ${challenge.expiresAt.formatAsDisplay()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (challenge != null) {
+                    Text(
+                        text = challenge.puzzle.title,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+                if (challenge != null) {
+                    Text(
+                        text = challenge.puzzle.description,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                if (challenge != null) {
+                    Text(
+                        text = "Type: ${challenge.puzzle.type.displayName} · Difficulty: ${challenge.puzzle.difficulty}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (challenge != null) {
+                    Text(
+                        text = "Available until ${challenge.expiresAt.formatAsDisplay()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Button(
-                    onClick = { onStartChallenge(challenge) },
+                    onClick = {
+                        if (challenge != null) {
+                            onStartChallenge(challenge)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Start challenge")

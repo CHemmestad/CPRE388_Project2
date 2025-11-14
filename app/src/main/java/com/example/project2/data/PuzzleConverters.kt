@@ -3,6 +3,9 @@ package com.example.project2.data
 import com.google.firebase.Timestamp
 import java.time.Duration
 import java.time.Instant
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
 
 fun PuzzleDescriptor.toFirebase(): FirebasePuzzle {
     return FirebasePuzzle(
