@@ -31,10 +31,10 @@ import com.example.project2.ui.widgets.StatChip
 
 @Composable
 fun DashboardScreen(
-    profile: PlayerProfile,
+    profile: PlayerProfile?,
     puzzles: List<PuzzleDescriptor>,
     progress: Map<String, PuzzleProgress>,
-    dailyChallenge: DailyChallenge,
+    dailyChallenge: DailyChallenge?,
     modifier: Modifier = Modifier,
     onPlayPuzzle: (PuzzleDescriptor) -> Unit = {},
     onViewDailyChallenge: () -> Unit = {}
@@ -45,11 +45,15 @@ fun DashboardScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        GreetingHeader(profile = profile)
-        DailyChallengeCard(
-            dailyChallenge = dailyChallenge,
-            onViewChallenge = onViewDailyChallenge
-        )
+        if (profile != null) {
+            GreetingHeader(profile = profile)
+        }
+        if (dailyChallenge != null) {
+            DailyChallengeCard(
+                dailyChallenge = dailyChallenge,
+                onViewChallenge = onViewDailyChallenge
+            )
+        }
 
         Text(
             text = "Continue Playing",
@@ -83,7 +87,9 @@ fun DashboardScreen(
         ) {
             StatChip(title = "Levels Cleared", value = "32")
             StatChip(title = "Longest Streak", value = "5 days")
-            StatChip(title = "Adaptive Level", value = profile.preferredDifficulty.name)
+            if (profile != null) {
+                StatChip(title = "Adaptive Level", value = profile.preferredDifficulty.name)
+            }
         }
     }
 }
