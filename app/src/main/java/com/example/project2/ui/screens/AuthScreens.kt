@@ -17,19 +17,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +46,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.project2.R
 import com.example.project2.data.AuthRepository
+import com.example.project2.data.DailyChallengeGeneratorRepository
+import kotlinx.coroutines.launch
 
 // ====================== LOGIN SCREEN ======================
 @Composable
@@ -279,22 +286,228 @@ fun CreateAccountScreen(
 @Composable
 fun DailyChallengeGeneratorScreen(
     modifier: Modifier = Modifier,
-    onGenerateDailyChallenge: () -> Unit = {},
+    onGenerateDailyChallenge: (String) -> Unit = {},
     onBackToLogin: () -> Unit = {}
 ) {
-    Box(
+    var challengeTitle by rememberSaveable { mutableStateOf("Prism Pulse Relay") }
+    var difficulty by rememberSaveable { mutableStateOf("Expert speed-matching with escalating twists") }
+    var theme by rememberSaveable { mutableStateOf("Neo-futuristic observatory that bends light") }
+    var playerGoal by rememberSaveable { mutableStateOf("Chain together 5 flawless pattern recalls while the board mutates") }
+    var constraints by rememberSaveable { mutableStateOf("Board must reconfigure after every success, no repeated grids, include wildcard tiles") }
+    var scoringFocus by rememberSaveable { mutableStateOf("Combo length, accuracy streak, bonus for adaptive strategy") }
+    var tone by rememberSaveable { mutableStateOf("Energetic, encouraging, concise") }
+    var outputFormat by rememberSaveable { mutableStateOf("Return valid JSON for DailyPuzzleContent.grid/controls/stats fields only") }
+    var isGenerating by remember { mutableStateOf(false) }
+    var statusMessage by remember { mutableStateOf<String?>(null) }
+    var statusIsError by remember { mutableStateOf(false) }
+
+    val prompt by remember(
+        challengeTitle,
+        difficulty,
+        theme,
+        playerGoal,
+        constraints,
+        scoringFocus,
+        tone,
+        outputFormat
+    ) {
+        derivedStateOf {
+            buildDailyChallengePrompt(
+                DailyChallengePromptParameters(
+                    title = challengeTitle,
+                    difficulty = difficulty,
+                    theme = theme,
+                    playerGoal = playerGoal,
+                    constraints = constraints,
+                    scoringFocus = scoringFocus,
+                    tone = tone,
+                    outputFormat = outputFormat
+                )
+            )
+        }
+    }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val generatorRepository = remember { DailyChallengeGeneratorRepository() }
+
+    val scrollState = rememberScrollState()
+
+    Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
-        contentAlignment = Alignment.Center
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Text(
+            text = "AI Daily Challenge Generator",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = "Describe the challenge you want the AI to build. These fields become a structured prompt you can send to OpenAI.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        OutlinedTextField(
+            value = challengeTitle,
+            onValueChange = { challengeTitle = it },
+            label = { Text("Challenge title / hook") },
+            placeholder = { Text("e.g., Prism Pulse Relay") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = difficulty,
+            onValueChange = { difficulty = it },
+            label = { Text("Difficulty + progression notes") },
+            placeholder = { Text("Expert speed-matching with escalating twists") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = theme,
+            onValueChange = { theme = it },
+            label = { Text("Setting or theme") },
+            placeholder = { Text("Neo-futuristic observatory that bends light") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = playerGoal,
+            onValueChange = { playerGoal = it },
+            label = { Text("Player objective") },
+            placeholder = { Text("Chain together 5 flawless pattern recalls while the board mutates") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = constraints,
+            onValueChange = { constraints = it },
+            label = { Text("Constraints / mechanics to enforce") },
+            placeholder = { Text("Board must reconfigure after every success, no repeated grids, include wildcard tiles") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = scoringFocus,
+            onValueChange = { scoringFocus = it },
+            label = { Text("Scoring + stats focus") },
+            placeholder = { Text("Combo length, accuracy streak, bonus for adaptive strategy") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = tone,
+            onValueChange = { tone = it },
+            label = { Text("Instruction tone") },
+            placeholder = { Text("Energetic, encouraging, concise") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = outputFormat,
+            onValueChange = { outputFormat = it },
+            label = { Text("Output format requirements") },
+            placeholder = { Text("Return valid JSON for DailyPuzzleContent fields only") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text(
+            text = "Prompt preview",
+            style = MaterialTheme.typography.titleMedium
+        )
+        OutlinedTextField(
+            value = prompt,
+            onValueChange = {},
+            label = { Text("Prompt to send to OpenAI") },
+            supportingText = { Text("Copy this prompt or tap Generate to send it through your integration.") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp),
+            readOnly = true
+        )
+
         Button(
             onClick = {
-                onGenerateDailyChallenge()
-                onBackToLogin()
-            }
+                coroutineScope.launch {
+                    isGenerating = true
+                    statusMessage = null
+                    statusIsError = false
+                    try {
+                        val result = generatorRepository.generateAndStore(prompt)
+                        statusMessage = "Challenge saved (id: ${result.documentId})"
+                        Toast.makeText(context, "Daily challenge saved!", Toast.LENGTH_SHORT).show()
+                        onGenerateDailyChallenge(result.rawJson)
+                        onBackToLogin()
+                    } catch (e: Exception) {
+                        val message = e.localizedMessage ?: "Unable to generate challenge"
+                        statusMessage = message
+                        statusIsError = true
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    } finally {
+                        isGenerating = false
+                    }
+                }
+            },
+            enabled = prompt.isNotBlank() && !isGenerating,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Generate Daily Challenge")
+            if (isGenerating) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Sending to OpenAI…")
+            } else {
+                Text("Generate with OpenAI")
+            }
+        }
+
+        statusMessage?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (statusIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+        }
+
+        TextButton(
+            onClick = onBackToLogin,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to log in")
         }
     }
 }
+
+private data class DailyChallengePromptParameters(
+    val title: String,
+    val difficulty: String,
+    val theme: String,
+    val playerGoal: String,
+    val constraints: String,
+    val scoringFocus: String,
+    val tone: String,
+    val outputFormat: String
+)
+
+private fun buildDailyChallengePrompt(params: DailyChallengePromptParameters): String {
+    return buildString {
+        appendLine("You are an elite puzzle designer for the MindMatch mobile app. Craft a brand-new, never-before-seen daily challenge.")
+        appendLine("Title: ${params.title.orDefault("Untitled Challenge")}")
+        appendLine("Difficulty & progression: ${params.difficulty.orDefault("Balanced difficulty with escalating steps")}")
+        appendLine("Theme / setting: ${params.theme.orDefault("Abstract neural interface")}")
+        appendLine("Player objective: ${params.playerGoal.orDefault("Deliver a memorable logic puzzle experience")}")
+        appendLine("Constraints & mechanics: ${params.constraints.orDefault("Ensure unique mechanics and zero reused templates")}")
+        appendLine("Scoring + stats focus: ${params.scoringFocus.orDefault("Track streaks, accuracy, and time remaining")}")
+        appendLine("Instruction tone: ${params.tone.orDefault("Friendly and concise")}")
+        appendLine("Output format requirements: ${params.outputFormat.orDefault("Respond with JSON for DailyPuzzleContent (instructions, grid, controls, stats)")}")
+        appendLine()
+        appendLine("Rules:")
+        appendLine("1. Puzzle must be solvable without prior template knowledge.")
+        appendLine("2. Grid entries should be concise strings; avoid emojis.")
+        appendLine("3. Controls should describe how players interact (label + isPrimary flag).")
+        appendLine("4. Stats need numeric target/streak/timeRemainingSeconds values.")
+        appendLine("5. Keep instructions under 120 words and match the requested tone.")
+        appendLine()
+        appendLine("Return a single JSON object only. Do not include commentary.")
+    }
+}
+
+private fun String.orDefault(default: String): String = if (this.isBlank()) default else this
