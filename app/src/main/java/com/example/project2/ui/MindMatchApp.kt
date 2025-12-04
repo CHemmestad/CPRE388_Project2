@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -42,23 +41,19 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleType
-import com.example.project2.ui.screens.CreateAccountScreen
-import com.example.project2.ui.screens.CreatePuzzleScreen
-import com.example.project2.ui.screens.DailyChallengeScreen
-import com.example.project2.ui.screens.DashboardScreen
-import com.example.project2.ui.screens.LeaderboardScreen
-import com.example.project2.ui.screens.LoginScreen
-import com.example.project2.ui.screens.PatternMemoryScreen
-import com.example.project2.ui.screens.ProfileScreen
-import com.example.project2.ui.screens.PuzzleLibraryScreen
-import com.example.project2.ui.screens.PuzzleNotFoundScreen
-import com.example.project2.ui.screens.PuzzleNotReadyScreen
+import com.example.project2.ui.screens.*
 import com.example.project2.ui.theme.CharcoalSurface
 import com.example.project2.ui.theme.RoyalBluePrimary
 
 private const val PUZZLE_ID_ARG = "puzzleId"
-private const val PUZZLE_PLAY_ROUTE = "puzzlePlay"
-private const val PUZZLE_PLAY_ROUTE_PATTERN = "$PUZZLE_PLAY_ROUTE/{$PUZZLE_ID_ARG}"
+private const val GRID_SIZE_ARG = "gridSize"
+
+private const val PUZZLE_PLAY_ROUTE = "puzzlePlay/{$PUZZLE_ID_ARG}"
+
+private const val JIGSAW_DIFFICULTY_ROUTE = "jigsawDifficulty/{$PUZZLE_ID_ARG}"
+
+private const val JIGSAW_PLAY_ROUTE = "jigsawPlay/{$PUZZLE_ID_ARG}/{$GRID_SIZE_ARG}"
+
 private const val AUTH_LOGIN_ROUTE = "auth_login"
 private const val AUTH_CREATE_ROUTE = "auth_create"
 
@@ -99,12 +94,13 @@ fun MindMatchApp(
         val isTopLevelDestination = MindMatchDestination.entries.any { destination ->
             currentDestination.isDestinationInHierarchy(destination)
         }
-        val puzzleTitle = if (currentDestination?.route == PUZZLE_PLAY_ROUTE_PATTERN) {
-            navBackStackEntry?.arguments?.getString(PUZZLE_ID_ARG)?.let { puzzleId ->
-                viewModel.puzzles.firstOrNull { it.id == puzzleId }?.title
+        val puzzleTitle = when (currentDestination?.route) {
+            PUZZLE_PLAY_ROUTE, JIGSAW_DIFFICULTY_ROUTE, JIGSAW_PLAY_ROUTE -> {
+                navBackStackEntry?.arguments?.getString(PUZZLE_ID_ARG)?.let { puzzleId ->
+                    viewModel.puzzles.firstOrNull { it.id == puzzleId }?.title
+                }
             }
-        } else {
-            null
+            else -> null
         }
         Scaffold(
             modifier = modifier,
@@ -152,24 +148,28 @@ fun MindMatchApp(
                 startDestination = MindMatchDestination.Dashboard.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
+                val onPlayPuzzle: (PuzzleDescriptor) -> Unit = { puzzle ->
+                    if (puzzle.type == PuzzleType.JIGSAW) {
+                        navController.navigate("jigsawDifficulty/${puzzle.id}")
+                    } else {
+                        navController.navigate("puzzlePlay/${puzzle.id}")
+                    }
+                }
+
                 composable(MindMatchDestination.Dashboard.route) {
                     DashboardScreen(
                         profile = viewModel.profile,
                         puzzles = viewModel.puzzles,
                         progress = viewModel.progressByPuzzle,
                         dailyChallenge = viewModel.dailyChallenge,
-                        onPlayPuzzle = { puzzle ->
-                            navController.navigate(buildPuzzlePlayRoute(puzzle.id))
-                        }
+                        onPlayPuzzle = onPlayPuzzle
                     )
                 }
                 composable(MindMatchDestination.Puzzles.route) {
                     PuzzleLibraryScreen(
                         puzzles = viewModel.puzzles,
                         progress = viewModel.progressByPuzzle,
-                        onPlayPuzzle = { puzzle ->
-                            navController.navigate(buildPuzzlePlayRoute(puzzle.id))
-                        }
+                        onPlayPuzzle = onPlayPuzzle
                     )
                 }
                 composable(MindMatchDestination.Create.route) {
@@ -178,9 +178,7 @@ fun MindMatchApp(
                 composable(MindMatchDestination.Daily.route) {
                     DailyChallengeScreen(
                         challenge = viewModel.dailyChallenge,
-                        onStartChallenge = { challenge ->
-                            navController.navigate(buildPuzzlePlayRoute(challenge.puzzle.id))
-                        }
+                        onStartChallenge = { challenge -> onPlayPuzzle(challenge.puzzle) }
                     )
                 }
                 composable(MindMatchDestination.Leaderboard.route) {
@@ -194,8 +192,41 @@ fun MindMatchApp(
                         profile = viewModel.profile
                     )
                 }
+
                 composable(
-                    route = PUZZLE_PLAY_ROUTE_PATTERN,
+                    route = JIGSAW_DIFFICULTY_ROUTE,
+                    arguments = listOf(navArgument(PUZZLE_ID_ARG) { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val puzzleId = backStackEntry.arguments?.getString(PUZZLE_ID_ARG)
+                    DifficultySelectionScreen { selectedGridSize ->
+                        navController.navigate("jigsawPlay/$puzzleId/$selectedGridSize")
+                    }
+                }
+
+                composable(
+                    route = JIGSAW_PLAY_ROUTE,
+                    arguments = listOf(
+                        navArgument(PUZZLE_ID_ARG) { type = NavType.StringType },
+                        navArgument(GRID_SIZE_ARG) { type = NavType.IntType }
+                    )
+                ) { backStackEntry ->
+                    val puzzleId = backStackEntry.arguments?.getString(PUZZLE_ID_ARG)
+                    val gridSize = backStackEntry.arguments?.getInt(GRID_SIZE_ARG)
+                    val puzzle = puzzleId?.let { id -> viewModel.puzzles.firstOrNull { it.id == id } }
+
+                    if (puzzle != null && gridSize != null) {
+                        JigsawPuzzleScreen(
+                            puzzle = puzzle,
+                            onBack = { navController.popBackStack() },
+                            gridSize = gridSize
+                        )
+                    } else {
+                        PuzzleNotFoundScreen()
+                    }
+                }
+
+                composable(
+                    route = PUZZLE_PLAY_ROUTE,
                     arguments = listOf(navArgument(PUZZLE_ID_ARG) { type = NavType.StringType })
                 ) { backStackEntry ->
                     val puzzleId = backStackEntry.arguments?.getString(PUZZLE_ID_ARG)
@@ -207,7 +238,7 @@ fun MindMatchApp(
                         puzzle.type == PuzzleType.PATTERN_MEMORY -> PatternMemoryScreen(
                             puzzle = puzzle,
                             progress = progress,
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
                         )
                         else -> PuzzleNotReadyScreen(puzzle = puzzle)
                     }
@@ -216,6 +247,7 @@ fun MindMatchApp(
         }
     }
 }
+
 
 @Composable
 private fun MindMatchNavigationBar(
@@ -258,8 +290,6 @@ private fun textForDestination(destination: NavDestination?): String {
         MindMatchDestination.entries.find { it.route == route }?.label
     } ?: fallback
 }
-
-private fun buildPuzzlePlayRoute(puzzleId: String): String = "$PUZZLE_PLAY_ROUTE/$puzzleId"
 
 @Composable
 private fun AuthNavHost(

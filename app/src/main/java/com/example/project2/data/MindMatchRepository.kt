@@ -28,6 +28,14 @@ class FakeMindMatchRepository : MindMatchRepository {
             isUserCreated = false
         ),
         PuzzleDescriptor(
+            title = "Jigsaw Puzzle",
+            description = "Assemble the scrambled pieces to form a picture.",
+            type = PuzzleType.JIGSAW,
+            creatorId = "community",
+            difficulty = Difficulty.EASY,
+            isUserCreated = true
+        ),
+        PuzzleDescriptor(
             title = "Logic Links",
             description = "Deduce correct pairings using logical clues.",
             type = PuzzleType.LOGIC_GRID,
