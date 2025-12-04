@@ -42,6 +42,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleType
+import com.example.project2.ui.screens.*
 import com.example.project2.ui.screens.CreateAccountScreen
 import com.example.project2.ui.screens.CreatePuzzleScreen
 import com.example.project2.ui.screens.DailyChallengePlayScreen
