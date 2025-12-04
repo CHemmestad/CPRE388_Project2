@@ -1,5 +1,6 @@
 package com.example.project2.ui.screens
 
+import android.media.MediaPlayer
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,9 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.project2.R
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleProgress
 import com.example.project2.data.PuzzleType
@@ -56,6 +60,20 @@ fun PatternMemoryScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val startSoundPlayer = remember { MediaPlayer.create(context, R.raw.start_sound) }
+    val colorSoundPlayer = remember { MediaPlayer.create(context, R.raw.newcolor_sound) }
+    val tapSoundPlayer = remember { MediaPlayer.create(context, R.raw.push_sound) }
+    val incorrectSoundPlayer = remember { MediaPlayer.create(context, R.raw.incorrect_sound) }
+    DisposableEffect(Unit) {
+        onDispose {
+            startSoundPlayer?.release()
+            colorSoundPlayer?.release()
+            tapSoundPlayer?.release()
+            incorrectSoundPlayer?.release()
+        }
+    }
+
     val tiles = remember { defaultPatternTiles() }
     val scope = rememberCoroutineScope()
 
@@ -82,6 +100,7 @@ fun PatternMemoryScreen(
             delay(400)
             pattern.forEach { tileIndex ->
                 activeTileIndex = tileIndex
+                colorSoundPlayer.playFromStart()
                 delay(420)
                 activeTileIndex = null
                 delay(160)
@@ -91,6 +110,7 @@ fun PatternMemoryScreen(
     }
 
     fun startPreview() {
+        startSoundPlayer.playFromStart()
         phase = PatternPhase.Preview
         activeTileIndex = null
         mistakes = 0
@@ -102,6 +122,7 @@ fun PatternMemoryScreen(
 
         scope.launch {
             activeTileIndex = tileIndex
+            tapSoundPlayer.playFromStart()
             delay(150)
             activeTileIndex = null
         }
@@ -114,6 +135,7 @@ fun PatternMemoryScreen(
             }
         } else {
             mistakes += 1
+            incorrectSoundPlayer.playFromStart()
             phase = PatternPhase.Failed
         }
     }
@@ -437,4 +459,17 @@ private fun Duration.toReadableString(): String {
     val minutes = (totalSeconds / 60).toInt()
     val secondsRemainder = (totalSeconds % 60).toInt()
     return "%d:%02d".format(minutes, secondsRemainder)
+}
+
+private fun MediaPlayer?.playFromStart() {
+    this ?: return
+    try {
+        if (isPlaying) {
+            seekTo(0)
+        } else {
+            seekTo(0)
+            start()
+        }
+    } catch (_: IllegalStateException) {
+    }
 }

@@ -33,11 +33,12 @@ import com.example.project2.data.PlayerProfile
 
 @Composable
 fun ProfileScreen(
-    profile: PlayerProfile,
-    modifier: Modifier = Modifier
+    profile: PlayerProfile?,
+    modifier: Modifier = Modifier,
+    onLogout: () -> Unit = {}
 ) {
-    var displayName by remember(profile.id) { mutableStateOf(profile.displayName) }
-    var bio by remember(profile.id) { mutableStateOf(profile.bio) }
+    var displayName by remember(profile!!.id) { mutableStateOf(profile!!.displayName) }
+    var bio by remember(profile.id) { mutableStateOf(profile!!.bio) }
 
     Column(
         modifier = modifier
@@ -113,25 +114,33 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Save to persistence */ }
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Filled.Restore, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save changes")
+                        Button(
+                            modifier = Modifier.weight(1f),
+                            onClick = { /* TODO: Save to persistence */ }
+                        ) {
+                            Icon(Icons.Filled.Restore, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Save changes")
+                        }
+                        Button(
+                            modifier = Modifier.weight(1f),
+                            onClick = { /* TODO: Delete profile */ }
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete profile")
+                        }
                     }
                     Button(
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Delete profile */ }
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onLogout
                     ) {
-                        Icon(Icons.Filled.Delete, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete profile")
+                        Text("Log out")
                     }
                 }
             }

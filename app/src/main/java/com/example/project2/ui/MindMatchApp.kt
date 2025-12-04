@@ -1,6 +1,7 @@
 package com.example.project2.ui
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -42,8 +43,25 @@ import androidx.navigation.navArgument
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleType
 import com.example.project2.ui.screens.*
+import com.example.project2.ui.screens.CreateAccountScreen
+import com.example.project2.ui.screens.CreatePuzzleScreen
+import com.example.project2.ui.screens.DailyChallengePlayScreen
+import com.example.project2.ui.screens.DailyChallengeScreen
+import com.example.project2.ui.screens.DashboardScreen
+import com.example.project2.ui.screens.DailyChallengeGeneratorScreen
+import com.example.project2.ui.screens.LeaderboardScreen
+import com.example.project2.ui.screens.LoginScreen
+import com.example.project2.ui.screens.PatternMemoryScreen
+import com.example.project2.ui.screens.ProfileScreen
+import com.example.project2.ui.screens.PuzzleLibraryScreen
+import com.example.project2.ui.screens.PuzzleNotFoundScreen
+import com.example.project2.ui.screens.PuzzleNotReadyScreen
 import com.example.project2.ui.theme.CharcoalSurface
 import com.example.project2.ui.theme.RoyalBluePrimary
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.ui.platform.LocalContext
+
 
 private const val PUZZLE_ID_ARG = "puzzleId"
 private const val GRID_SIZE_ARG = "gridSize"
@@ -54,8 +72,12 @@ private const val JIGSAW_DIFFICULTY_ROUTE = "jigsawDifficulty/{$PUZZLE_ID_ARG}"
 
 private const val JIGSAW_PLAY_ROUTE = "jigsawPlay/{$PUZZLE_ID_ARG}/{$GRID_SIZE_ARG}"
 
+private const val PUZZLE_PLAY_ROUTE = "puzzlePlay"
+private const val PUZZLE_PLAY_ROUTE_PATTERN = "$PUZZLE_PLAY_ROUTE/{$PUZZLE_ID_ARG}"
+private const val DAILY_PLAY_ROUTE = "dailyPlay"
 private const val AUTH_LOGIN_ROUTE = "auth_login"
 private const val AUTH_CREATE_ROUTE = "auth_create"
+private const val AUTH_SECRET_ROUTE = "auth_secret"
 
 /**
  * Top-level navigation destinations for the app.
@@ -162,7 +184,10 @@ fun MindMatchApp(
                         puzzles = viewModel.puzzles,
                         progress = viewModel.progressByPuzzle,
                         dailyChallenge = viewModel.dailyChallenge,
-                        onPlayPuzzle = onPlayPuzzle
+                        onPlayPuzzle = { puzzle ->
+                            navController.navigate(buildPuzzlePlayRoute(puzzle.id))
+                        },
+                        onViewDailyChallenge = { navController.navigate(DAILY_PLAY_ROUTE) }
                     )
                 }
                 composable(MindMatchDestination.Puzzles.route) {
@@ -178,7 +203,9 @@ fun MindMatchApp(
                 composable(MindMatchDestination.Daily.route) {
                     DailyChallengeScreen(
                         challenge = viewModel.dailyChallenge,
-                        onStartChallenge = { challenge -> onPlayPuzzle(challenge.puzzle) }
+                        onStartChallenge = {
+                            navController.navigate(DAILY_PLAY_ROUTE)
+                        }
                     )
                 }
                 composable(MindMatchDestination.Leaderboard.route) {
@@ -189,7 +216,8 @@ fun MindMatchApp(
                 }
                 composable(MindMatchDestination.Profile.route) {
                     ProfileScreen(
-                        profile = viewModel.profile
+                        profile = viewModel.profile,
+                        onLogout = { isAuthenticated = false }
                     )
                 }
 
@@ -242,6 +270,11 @@ fun MindMatchApp(
                         )
                         else -> PuzzleNotReadyScreen(puzzle = puzzle)
                     }
+                }
+                composable(DAILY_PLAY_ROUTE) {
+                    DailyChallengePlayScreen(
+                        challenge = viewModel.dailyChallenge
+                    )
                 }
             }
         }
@@ -302,13 +335,35 @@ private fun AuthNavHost(
     ) {
         composable(AUTH_LOGIN_ROUTE) {
             LoginScreen(
+
                 onLogin = onAuthenticated,
-                onCreateAccount = { navController.navigate(AUTH_CREATE_ROUTE) }
+                onCreateAccount = { navController.navigate(AUTH_CREATE_ROUTE) },
+                onSecretAccess = { navController.navigate(AUTH_SECRET_ROUTE) }
             )
         }
         composable(AUTH_CREATE_ROUTE) {
+            val context = LocalContext.current
             CreateAccountScreen(
-                onCreateAccount = onAuthenticated,
+                onBackToLogin = { navController.popBackStack() },
+                onCreateAccount = {
+                    // show toast using a stable UI context
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                    }
+
+                    // give toast time to appear before navigating
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (navController.popBackStack().not()) {
+                            // fallback in case stack is empty
+                            navController.navigate(AUTH_LOGIN_ROUTE)
+                        }
+                    }, 1200)
+                }
+            )
+        }
+
+        composable(AUTH_SECRET_ROUTE) {
+            DailyChallengeGeneratorScreen(
                 onBackToLogin = { navController.popBackStack() }
             )
         }

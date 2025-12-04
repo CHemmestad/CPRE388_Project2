@@ -1,5 +1,6 @@
 package com.example.project2.data
 
+import com.google.firebase.Timestamp
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -15,7 +16,7 @@ data class PlayerProfile(
     val avatarUrl: String? = null,
     val bio: String = "",
     val preferredDifficulty: Difficulty = Difficulty.MEDIUM,
-    val createdAt: Instant = Instant.now()
+    val createdAt: Timestamp = Timestamp.now()
 )
 
 data class PuzzleDescriptor(
@@ -50,7 +51,8 @@ data class LeaderboardEntry(
 
 data class DailyChallenge(
     val puzzle: PuzzleDescriptor,
-    val expiresAt: Instant
+    val expiresAt: Instant,
+    val content: DailyPuzzleContent
 )
 
 enum class PuzzleType(val displayName: String) {
@@ -65,3 +67,35 @@ enum class PuzzleType(val displayName: String) {
 enum class Difficulty {
     EASY, MEDIUM, HARD, EXPERT
 }
+
+data class DailyPuzzleContent(
+    val instructions: String,
+    val grid: List<List<PuzzleCell>>,
+    val controls: List<PuzzleControl>,
+    val stats: PuzzleStats
+)
+
+data class PuzzleCell(
+    val value: String,
+    val state: PuzzleCellState = PuzzleCellState.Neutral
+)
+
+enum class PuzzleCellState {
+    Neutral,
+    Active,
+    Correct,
+    Incorrect,
+    Disabled
+}
+
+data class PuzzleControl(
+    val id: String,
+    val label: String,
+    val isPrimary: Boolean = false
+)
+
+data class PuzzleStats(
+    val target: Int,
+    val streak: Int,
+    val timeRemainingSeconds: Int
+)

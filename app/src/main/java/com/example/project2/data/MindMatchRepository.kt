@@ -2,6 +2,9 @@ package com.example.project2.data
 
 import java.time.Duration
 import java.time.Instant
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
 
 /**
  * Repository abstraction for MindMatch data sources.
@@ -15,18 +18,23 @@ interface MindMatchRepository {
     val leaderboard: Map<String, List<LeaderboardEntry>>
 }
 
+/**
+ * Fake implementation of [MindMatchRepository] that returns hardcoded data.
+ */
 class FakeMindMatchRepository : MindMatchRepository {
     override val activeProfile: PlayerProfile = PlayerProfile(displayName = "Avery")
 
+    private val colorPulse = PuzzleDescriptor(
+        title = "Color Pulse",
+        description = "Memorize flashing colors and repeat the sequence.",
+        type = PuzzleType.PATTERN_MEMORY,
+        creatorId = activeProfile.id,
+        difficulty = Difficulty.MEDIUM,
+        isUserCreated = false
+    )
+
     override val puzzles: List<PuzzleDescriptor> = listOf(
-        PuzzleDescriptor(
-            title = "Color Pulse",
-            description = "Memorize flashing colors and repeat the sequence.",
-            type = PuzzleType.PATTERN_MEMORY,
-            creatorId = activeProfile.id,
-            difficulty = Difficulty.MEDIUM,
-            isUserCreated = false
-        ),
+        colorPulse,
         PuzzleDescriptor(
             title = "Jigsaw Puzzle",
             description = "Assemble the scrambled pieces to form a picture.",
@@ -88,11 +96,43 @@ class FakeMindMatchRepository : MindMatchRepository {
     }
 
     override val dailyChallenge: DailyChallenge = DailyChallenge(
-        puzzle = puzzles.first().copy(
-            id = puzzles.first().id,
-            isUserCreated = true,
-            creatorId = "community"
+        puzzle = colorPulse.copy(
+            id = "daily_mind_jogger",
+            title = "Mind Jogger",
+            description = "Daily challenge: conquer a curated memory scramble.",
+            isUserCreated = false,
+            creatorId = "daily-team"
         ),
-        expiresAt = Instant.now().plusSeconds(60 * 60 * 18)
+        expiresAt = Instant.now().plusSeconds(60 * 60 * 18),
+        content = DailyPuzzleContent(
+            instructions = "Memorize the flashing pattern, then reproduce it within the time limit.",
+            grid = listOf(
+                listOf(
+                    PuzzleCell("A"),
+                    PuzzleCell("B", state = PuzzleCellState.Active),
+                    PuzzleCell("C")
+                ),
+                listOf(
+                    PuzzleCell("D"),
+                    PuzzleCell("E"),
+                    PuzzleCell("F")
+                ),
+                listOf(
+                    PuzzleCell("G"),
+                    PuzzleCell("H"),
+                    PuzzleCell("I", state = PuzzleCellState.Disabled)
+                )
+            ),
+            controls = listOf(
+                PuzzleControl(id = "submit", label = "Submit", isPrimary = true),
+                PuzzleControl(id = "hint", label = "Hint"),
+                PuzzleControl(id = "shuffle", label = "Shuffle")
+            ),
+            stats = PuzzleStats(
+                target = 16,
+                streak = 3,
+                timeRemainingSeconds = 72
+            )
+        )
     )
 }

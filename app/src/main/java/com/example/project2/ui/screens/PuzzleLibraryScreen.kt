@@ -45,18 +45,6 @@ fun PuzzleLibraryScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Button(
-            onClick = { /* TODO filter dialog */ },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            androidx.compose.material3.Icon(
-                imageVector = Icons.Filled.Tune,
-                contentDescription = null
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Filter by type/difficulty")
-        }
-
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()
