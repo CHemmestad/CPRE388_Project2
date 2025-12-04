@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.project2.data.BoardCoordinate
 import com.example.project2.data.DailyChallenge
 import com.example.project2.data.DailyPuzzleContent
 import com.example.project2.data.PuzzleCell
