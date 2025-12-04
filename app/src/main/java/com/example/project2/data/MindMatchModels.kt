@@ -24,10 +24,12 @@ data class PuzzleDescriptor(
     val title: String,
     val description: String,
     val type: PuzzleType,
+    val gridSize: Int? = null,
     val creatorId: String,
     val difficulty: Difficulty,
     val estimatedDuration: Duration = Duration.ofMinutes(2),
     val isUserCreated: Boolean = false,
+    val imageName: String? = null,
     val lastPlayed: Instant? = null
 )
 
@@ -58,7 +60,8 @@ enum class PuzzleType(val displayName: String) {
     LOGIC_GRID("Logic Grid"),
     SEQUENCE_RECALL("Sequence Recall"),
     FOCUS_TAPPER("Focus Tapper"),
-    SPEED_MATCH("Speed Match")
+    SPEED_MATCH("Speed Match"),
+    JIGSAW("Jigsaw Puzzle")
 }
 
 enum class Difficulty {
