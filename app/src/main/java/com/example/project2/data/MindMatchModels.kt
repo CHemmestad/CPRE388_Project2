@@ -61,7 +61,8 @@ enum class PuzzleType(val displayName: String) {
     SEQUENCE_RECALL("Sequence Recall"),
     FOCUS_TAPPER("Focus Tapper"),
     SPEED_MATCH("Speed Match"),
-    JIGSAW("Jigsaw Puzzle")
+    JIGSAW("Jigsaw Puzzle"),
+    MASTERMIND("Mastermind")
 }
 
 enum class Difficulty {

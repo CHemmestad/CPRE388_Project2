@@ -49,6 +49,8 @@ import com.example.project2.ui.screens.DailyChallengePlayScreen
 import com.example.project2.ui.screens.DailyChallengeScreen
 import com.example.project2.ui.screens.DashboardScreen
 import com.example.project2.ui.screens.DailyChallengeGeneratorScreen
+import com.example.project2.ui.screens.DifficultySelectionScreen
+import com.example.project2.ui.screens.JigsawPuzzleScreen
 import com.example.project2.ui.screens.LeaderboardScreen
 import com.example.project2.ui.screens.LoginScreen
 import com.example.project2.ui.screens.PatternMemoryScreen
@@ -72,12 +74,14 @@ private const val JIGSAW_DIFFICULTY_ROUTE = "jigsawDifficulty/{$PUZZLE_ID_ARG}"
 
 private const val JIGSAW_PLAY_ROUTE = "jigsawPlay/{$PUZZLE_ID_ARG}/{$GRID_SIZE_ARG}"
 
-private const val PUZZLE_PLAY_ROUTE = "puzzlePlay"
-private const val PUZZLE_PLAY_ROUTE_PATTERN = "$PUZZLE_PLAY_ROUTE/{$PUZZLE_ID_ARG}"
 private const val DAILY_PLAY_ROUTE = "dailyPlay"
 private const val AUTH_LOGIN_ROUTE = "auth_login"
 private const val AUTH_CREATE_ROUTE = "auth_create"
 private const val AUTH_SECRET_ROUTE = "auth_secret"
+
+private fun buildPuzzlePlayRoute(puzzleId: String): String {
+    return PUZZLE_PLAY_ROUTE.replace("{$PUZZLE_ID_ARG}", puzzleId)
+}
 
 /**
  * Top-level navigation destinations for the app.
@@ -174,7 +178,7 @@ fun MindMatchApp(
                     if (puzzle.type == PuzzleType.JIGSAW) {
                         navController.navigate("jigsawDifficulty/${puzzle.id}")
                     } else {
-                        navController.navigate("puzzlePlay/${puzzle.id}")
+                        navController.navigate(buildPuzzlePlayRoute(puzzle.id))
                     }
                 }
 
@@ -184,9 +188,7 @@ fun MindMatchApp(
                         puzzles = viewModel.puzzles,
                         progress = viewModel.progressByPuzzle,
                         dailyChallenge = viewModel.dailyChallenge,
-                        onPlayPuzzle = { puzzle ->
-                            navController.navigate(buildPuzzlePlayRoute(puzzle.id))
-                        },
+                        onPlayPuzzle = onPlayPuzzle,
                         onViewDailyChallenge = { navController.navigate(DAILY_PLAY_ROUTE) }
                     )
                 }

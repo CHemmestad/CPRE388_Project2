@@ -2,9 +2,8 @@ package com.example.project2.data
 
 import java.time.Duration
 import java.time.Instant
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Repository abstraction for MindMatch data sources.
@@ -97,42 +96,86 @@ class FakeMindMatchRepository : MindMatchRepository {
 
     override val dailyChallenge: DailyChallenge = DailyChallenge(
         puzzle = colorPulse.copy(
-            id = "daily_mind_jogger",
-            title = "Mind Jogger",
-            description = "Daily challenge: conquer a curated memory scramble.",
+            id = "daily_prism_pulse_relay",
+            title = "Prism Pulse Relay",
+            description = "An ever-shifting beam-tracking memory run.",
             isUserCreated = false,
             creatorId = "daily-team"
         ),
         expiresAt = Instant.now().plusSeconds(60 * 60 * 18),
-        content = DailyPuzzleContent(
-            instructions = "Memorize the flashing pattern, then reproduce it within the time limit.",
-            grid = listOf(
-                listOf(
-                    PuzzleCell("A"),
-                    PuzzleCell("B", state = PuzzleCellState.Active),
-                    PuzzleCell("C")
-                ),
-                listOf(
-                    PuzzleCell("D"),
-                    PuzzleCell("E"),
-                    PuzzleCell("F")
-                ),
-                listOf(
-                    PuzzleCell("G"),
-                    PuzzleCell("H"),
-                    PuzzleCell("I", state = PuzzleCellState.Disabled)
-                )
-            ),
-            controls = listOf(
-                PuzzleControl(id = "submit", label = "Submit", isPrimary = true),
-                PuzzleControl(id = "hint", label = "Hint"),
-                PuzzleControl(id = "shuffle", label = "Shuffle")
-            ),
-            stats = PuzzleStats(
-                target = 16,
-                streak = 3,
-                timeRemainingSeconds = 72
-            )
-        )
+        content = parseDailyPuzzleContent(PRISM_PULSE_JSON)
     )
 }
+
+private fun parseDailyPuzzleContent(json: String): DailyPuzzleContent {
+    val root = JSONObject(json)
+    val instructions = root.optString("instructions")
+
+    val gridArray = root.optJSONArray("grid") ?: JSONArray()
+    val grid = buildList {
+        for (rowIndex in 0 until gridArray.length()) {
+            val rowArray = gridArray.optJSONArray(rowIndex) ?: continue
+            add(buildList {
+                for (colIndex in 0 until rowArray.length()) {
+                    val cellObject = rowArray.optJSONObject(colIndex) ?: continue
+                    val value = cellObject.optString("value")
+                    val stateName = cellObject.optString("state")
+                    add(PuzzleCell(value = value, state = stateName.toPuzzleCellState()))
+                }
+            })
+        }
+    }
+
+    val controlsArray = root.optJSONArray("controls") ?: JSONArray()
+    val controls = buildList {
+        for (index in 0 until controlsArray.length()) {
+            val controlObject = controlsArray.optJSONObject(index) ?: continue
+            add(
+                PuzzleControl(
+                    id = controlObject.optString("id"),
+                    label = controlObject.optString("label"),
+                    isPrimary = controlObject.optBoolean("isPrimary", false)
+                )
+            )
+        }
+    }
+
+    val statsObject = root.optJSONObject("stats") ?: JSONObject()
+    val stats = PuzzleStats(
+        target = statsObject.optInt("target"),
+        streak = statsObject.optInt("streak"),
+        timeRemainingSeconds = statsObject.optInt("timeRemainingSeconds")
+    )
+
+    return DailyPuzzleContent(
+        instructions = instructions,
+        grid = grid,
+        controls = controls,
+        stats = stats
+    )
+}
+
+private fun String?.toPuzzleCellState(): PuzzleCellState =
+    PuzzleCellState.entries.firstOrNull { it.name.equals(this, ignoreCase = true) } ?: PuzzleCellState.Neutral
+
+private val PRISM_PULSE_JSON = """
+{
+  "instructions": "You're calibrating the Prism Pulse Relay. Tap the tiles in the sequence that matches today's beam path. After every perfect chain the grid morphs--adapt fast, keep your accuracy streak alive, and rack up the most luminous combo before the relay cools.",
+  "grid": [
+    [{"value":"P1","state":"Neutral"},{"value":"P2","state":"Neutral"},{"value":"P3","state":"Neutral"},{"value":"P4","state":"Neutral"}],
+    [{"value":"A","state":"Neutral"},{"value":"B","state":"Neutral"},{"value":"C","state":"Neutral"},{"value":"W","state":"Neutral"}],
+    [{"value":"D1","state":"Neutral"},{"value":"D2","state":"Neutral"},{"value":"D3","state":"Neutral"},{"value":"D4","state":"Neutral"}],
+    [{"value":"R1","state":"Neutral"},{"value":"T2","state":"Neutral"},{"value":"P3","state":"Neutral"},{"value":"Wildcard","state":"Neutral"}]
+  ],
+  "controls": [
+    {"id":"scan","label":"Scan New Pattern","isPrimary":true},
+    {"id":"lock","label":"Lock Sequence","isPrimary":false},
+    {"id":"wild","label":"Toggle Wildcard","isPrimary":false}
+  ],
+  "stats": {
+    "target": 5,
+    "streak": 0,
+    "timeRemainingSeconds": 120
+  }
+}
+""".trimIndent()

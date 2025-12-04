@@ -59,4 +59,28 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         activeProfile = profile
     }
 
+    suspend fun loadPuzzleTypes(): List<String> {
+        val snapshot = db.collection("puzzleTypes").get().await()
+        return snapshot.documents.mapNotNull { doc ->
+            doc.getString("name")?.takeIf { it.isNotBlank() }
+        }
+    }
+
+    /**
+     * Convenience helper for developers: seed puzzleTypes collection if empty.
+     * Call this from a one-off debug action; do NOT leave it on a hot path.
+     */
+    suspend fun seedPuzzleTypesIfEmpty(defaults: List<String> = listOf("Mastermind", "Color Match", "Jigsaw")) {
+        val snapshot = db.collection("puzzleTypes").get().await()
+        val existingNames = snapshot.documents.mapNotNull { it.getString("name") }.toSet()
+
+        defaults.forEach { type ->
+            if (existingNames.contains(type)) return@forEach
+            db.collection("puzzleTypes")
+                .document(type.lowercase().replace("\\s+".toRegex(), "_"))
+                .set(mapOf("name" to type))
+                .await()
+        }
+    }
+
 }
