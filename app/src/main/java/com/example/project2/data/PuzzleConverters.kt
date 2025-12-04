@@ -24,16 +24,20 @@ fun PuzzleDescriptor.toFirebase(): FirebasePuzzle {
 }
 
 fun FirebasePuzzle.toPuzzle(): PuzzleDescriptor {
+    fun normalizeEnum(value: String): String =
+        value.trim().replace("\\s+".toRegex(), "_").uppercase()
+
     return PuzzleDescriptor(
         id = id,
         title = title,
         description = description,
-        type = PuzzleType.valueOf(type),       // STRING → ENUM
+        type = PuzzleType.entries.firstOrNull { it.name == normalizeEnum(type) }
+            ?: PuzzleType.PATTERN_MEMORY,       // fallback to a safe default
         creatorId = creatorId,
-        difficulty = Difficulty.valueOf(difficulty), // STRING → ENUM
+        difficulty = Difficulty.entries.firstOrNull { it.name == normalizeEnum(difficulty) }
+            ?: Difficulty.MEDIUM, // default if malformed
         estimatedDuration = Duration.ofSeconds(estimatedDurationSeconds),
         isUserCreated = isUserCreated,
         lastPlayed = lastPlayed?.toDate()?.toInstant() // Timestamp → Instant
     )
 }
-
