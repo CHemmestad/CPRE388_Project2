@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.project2.data.BoardCoordinate
 import com.example.project2.data.DailyChallenge
 import com.example.project2.data.DailyPuzzleContent
 import com.example.project2.data.PuzzleCell
@@ -44,9 +45,22 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun DailyChallengePlayScreen(
-    challenge: DailyChallenge,
+    challenge: DailyChallenge?,      // <-- ACCEPT NULL
     modifier: Modifier = Modifier
 ) {
+    // handle null/initial loading state
+    if (challenge == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Loading daily challenge...")
+        }
+        return
+    }
+
     val content = challenge.content
     var activeSequence by remember(content) { mutableStateOf(generateSequence(content.grid, content.stats.target)) }
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -204,6 +218,7 @@ fun DailyChallengePlayScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+
         PuzzleStatusRow(challenge = challenge)
         PuzzleScoreStrip(stats = dynamicStats)
         Box(
@@ -317,6 +332,7 @@ private fun PuzzleCellView(
         PuzzleCellState.Disabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
         PuzzleCellState.Neutral -> MaterialTheme.colorScheme.surfaceBright
     }
+
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -351,6 +367,7 @@ private fun PuzzleControlRow(
     onControlPressed: (PuzzleControl) -> Unit
 ) {
     if (controls.isEmpty()) return
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -367,6 +384,7 @@ private fun PuzzleControlRow(
                     .weight(1f)
                     .widthIn(min = 88.dp)
                     .clip(RoundedCornerShape(16.dp))
+                    .background(activeColor)
                     .background(activeColor)
                     .clickable { onControlPressed(control) },
                 contentAlignment = Alignment.Center
@@ -398,7 +416,9 @@ private fun MiniStat(label: String, value: String) {
 }
 
 @Composable
-private fun PuzzleStatusRow(challenge: DailyChallenge) {
+private fun PuzzleStatusRow(challenge: DailyChallenge?) {
+    if (challenge == null) return  // <-- SAFETY FIX
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)

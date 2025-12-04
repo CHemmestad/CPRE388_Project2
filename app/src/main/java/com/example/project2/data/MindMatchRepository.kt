@@ -17,6 +17,9 @@ interface MindMatchRepository {
     val leaderboard: Map<String, List<LeaderboardEntry>>
 }
 
+/**
+ * Fake implementation of [MindMatchRepository] that returns hardcoded data.
+ */
 class FakeMindMatchRepository : MindMatchRepository {
     override val activeProfile: PlayerProfile = PlayerProfile(displayName = "Avery")
 
