@@ -42,7 +42,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleType
-import com.example.project2.ui.screens.*
 import com.example.project2.ui.screens.CreateAccountScreen
 import com.example.project2.ui.screens.CreatePuzzleScreen
 import com.example.project2.ui.screens.DailyChallengePlayScreen
@@ -274,7 +273,10 @@ fun MindMatchApp(
                         puzzle.type == PuzzleType.PATTERN_MEMORY -> PatternMemoryScreen(
                             puzzle = puzzle,
                             progress = progress,
-                            onBack = { navController.popBackStack() },
+                            onProgressUpdated = { newProgress ->
+                                viewModel.saveProgress(newProgress)   // <-- writes to Firebase + updates cache
+                            },
+                            onBack = { navController.popBackStack() }
                         )
                         puzzle.type == PuzzleType.MASTERMIND -> {
                             val config = puzzle.mastermindConfig

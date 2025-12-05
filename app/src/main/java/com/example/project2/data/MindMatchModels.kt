@@ -40,7 +40,7 @@ data class PuzzleProgress(
     val levelsUnlocked: Int,
     val bestScore: Int,
     val bestTime: Duration?,
-    val inProgressState: String? = null // Serialized game state for resume
+    val inProgressState: String? = null
 )
 
 data class LeaderboardEntry(

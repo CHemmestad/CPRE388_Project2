@@ -7,30 +7,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.project2.data.AuthRepository
 import com.example.project2.data.DailyChallenge
-import com.example.project2.data.FakeMindMatchRepository
 import com.example.project2.data.FirebaseMindMatchRepository
 import com.example.project2.data.LeaderboardEntry
-import com.example.project2.data.MindMatchRepository
 import com.example.project2.data.PlayerProfile
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleProgress
 import kotlinx.coroutines.launch
 
-/**
- * Simple ViewModel that exposes fake data for the UI while the real data layer is built.
- */
-/*
-class MindMatchViewModel(
-    private val repository: MindMatchRepository = FakeMindMatchRepository()
-) : ViewModel() {
-
-    val profile: PlayerProfile get() = repository.activeProfile
-    val puzzles: List<PuzzleDescriptor> get() = repository.puzzles
-    val progressByPuzzle: Map<String, PuzzleProgress> get() = repository.progressByPuzzle
-    val dailyChallenge: DailyChallenge get() = repository.dailyChallenge
-    val leaderboard: Map<String, List<LeaderboardEntry>> get() = repository.leaderboard
-}
-*/
 class MindMatchViewModel(
     private val authRepo: AuthRepository = AuthRepository(),
     private val repository: FirebaseMindMatchRepository = FirebaseMindMatchRepository()
@@ -59,10 +42,16 @@ class MindMatchViewModel(
 
     init {
         viewModelScope.launch {
-            try {
-                repository.loadActiveProfile(authRepo)
-                profile = repository.activeProfile
+            loadInitialData()
+        }
+    }
 
+    private suspend fun loadInitialData() {
+        isLoading = true
+        try {
+            // 1) load profile (also loads progress inside repository.loadActiveProfile)
+            repository.loadActiveProfile(authRepo)
+            profile = repository.activeProfile
                 // load puzzles
                 repository.loadPuzzlesFromFirebase()
                 puzzles = repository.puzzles
@@ -75,6 +64,17 @@ class MindMatchViewModel(
             } finally {
                 isLoading = false
             }
+    }
+
+    /**
+     * Called by puzzle screens when the user makes progress or exits.
+     * This saves to Firestore and updates the local cache.
+     */
+    fun saveProgress(progress: PuzzleProgress) {
+        val userId = authRepo.getCurrentUserId() ?: return
+        viewModelScope.launch {
+            repository.saveProgress(userId, progress)
+            progressByPuzzle = repository.progressByPuzzle
         }
     }
 

@@ -1,0 +1,24 @@
+package com.example.project2.data
+
+import java.time.Duration
+import com.google.firebase.Timestamp
+
+fun PuzzleProgress.toFirebase(): FirebasePuzzleProgress =
+    FirebasePuzzleProgress(
+        puzzleId = puzzleId,
+        currentLevel = currentLevel,
+        levelsUnlocked = levelsUnlocked,
+        bestScore = bestScore,
+        bestTimeSeconds = bestTime?.seconds,
+        inProgressState = inProgressState
+    )
+
+fun FirebasePuzzleProgress.toProgress(): PuzzleProgress =
+    PuzzleProgress(
+        puzzleId = puzzleId,
+        currentLevel = currentLevel,
+        levelsUnlocked = levelsUnlocked,
+        bestScore = bestScore,
+        bestTime = bestTimeSeconds?.let { Duration.ofSeconds(it) },
+        inProgressState = inProgressState
+    )

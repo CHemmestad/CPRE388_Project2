@@ -22,3 +22,12 @@ data class FirebasePuzzle(
     val mastermindLevels: Int? = null,
     val mastermindCode: List<String>? = null
 )
+
+data class FirebasePuzzleProgress(
+    val puzzleId: String = "",
+    val currentLevel: Int = 0,
+    val levelsUnlocked: Int = 0,
+    val bestScore: Int = 0,
+    val bestTimeSeconds: Long? = null,
+    val inProgressState: String? = null
+)
