@@ -20,12 +20,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleProgress
+import com.example.project2.ui.util.formatAsDisplay
+import java.time.Instant
 
 @Composable
 fun PuzzleCard(
     puzzle: PuzzleDescriptor,
     modifier: Modifier = Modifier,
     progress: PuzzleProgress? = null,
+    lastPlayed: Instant? = null,
     actionIcon: ImageVector? = null,
     actionText: String,
     onActionClick: () -> Unit = {}
@@ -68,6 +71,13 @@ fun PuzzleCard(
             if (progress != null) {
                 Text(
                     text = "Best score: ${progress.bestScore} · Level ${progress.currentLevel}/${progress.levelsUnlocked}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            lastPlayed?.let { playedAt ->
+                Text(
+                    text = "Last played ${playedAt.formatAsDisplay()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

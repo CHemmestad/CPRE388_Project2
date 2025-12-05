@@ -90,4 +90,12 @@ class MindMatchViewModel(
             }
         }
     }
+
+    fun markPuzzlePlayed(puzzleId: String) {
+        val userId = authRepo.getCurrentUserId() ?: return
+        viewModelScope.launch {
+            repository.recordPuzzlePlayed(userId, puzzleId)
+            profile = repository.activeProfile
+        }
+    }
 }

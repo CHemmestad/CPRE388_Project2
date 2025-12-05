@@ -16,7 +16,8 @@ data class PlayerProfile(
     val avatarUrl: String? = null,
     val bio: String = "",
     val preferredDifficulty: Difficulty = Difficulty.MEDIUM,
-    val createdAt: Timestamp = Timestamp.now()
+    val createdAt: Timestamp = Timestamp.now(),
+    val puzzlesPlayed: Map<String, Timestamp> = emptyMap()
 )
 
 data class PuzzleDescriptor(
