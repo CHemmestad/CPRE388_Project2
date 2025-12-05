@@ -63,9 +63,13 @@ class MindMatchViewModel(
                 repository.loadActiveProfile(authRepo)
                 profile = repository.activeProfile
 
+                // load puzzles
                 repository.loadPuzzlesFromFirebase()
                 puzzles = repository.puzzles
+                progressByPuzzle = repository.progressByPuzzle
                 userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+
+                // TODO: hook dailyChallenge/leaderboard when implemented in repo
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -79,6 +83,7 @@ class MindMatchViewModel(
             try {
                 repository.loadPuzzlesFromFirebase()
                 puzzles = repository.puzzles
+                progressByPuzzle = repository.progressByPuzzle
                 userPuzzles = puzzles.filter { it.creatorId == profile?.id }
             } catch (e: Exception) {
                 e.printStackTrace()
