@@ -52,11 +52,11 @@ class MindMatchViewModel(
             // 1) load profile (also loads progress inside repository.loadActiveProfile)
             repository.loadActiveProfile(authRepo)
             profile = repository.activeProfile
-                // load puzzles
-                repository.loadPuzzlesFromFirebase()
-                puzzles = repository.puzzles
-                progressByPuzzle = repository.progressByPuzzle
-                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+            // load puzzles
+            repository.loadPuzzlesFromFirebase()
+            puzzles = repository.puzzles
+            progressByPuzzle = repository.progressByPuzzle
+            userPuzzles = puzzles.filter { it.creatorId == profile?.id }
 
             // 2) load puzzles
             repository.loadPuzzlesFromFirebase()
@@ -104,4 +104,23 @@ class MindMatchViewModel(
         }
     }
 
+    fun refreshPuzzles() {
+        viewModelScope.launch {
+            try {
+                repository.loadPuzzlesFromFirebase()
+                puzzles = repository.puzzles
+                progressByPuzzle = repository.progressByPuzzle
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+    fun markPuzzlePlayed(puzzleId: String) {
+        val userId = authRepo.getCurrentUserId() ?: return
+        viewModelScope.launch {
+            repository.recordPuzzlePlayed(userId, puzzleId)
+            profile = repository.activeProfile
+        }
+    }
 }
