@@ -17,3 +17,12 @@ data class FirebasePuzzle(
     val isUserCreated: Boolean = false,
     val lastPlayed: Timestamp? = null     // Instant to Timestamp
 )
+
+data class FirebasePuzzleProgress(
+    val puzzleId: String = "",
+    val currentLevel: Int = 0,
+    val levelsUnlocked: Int = 0,
+    val bestScore: Int = 0,
+    val bestTimeSeconds: Long? = null,
+    val inProgressState: String? = null
+)
