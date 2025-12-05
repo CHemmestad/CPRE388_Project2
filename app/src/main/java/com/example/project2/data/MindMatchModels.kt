@@ -16,7 +16,8 @@ data class PlayerProfile(
     val avatarUrl: String? = null,
     val bio: String = "",
     val preferredDifficulty: Difficulty = Difficulty.MEDIUM,
-    val createdAt: Timestamp = Timestamp.now()
+    val createdAt: Timestamp = Timestamp.now(),
+    val puzzlesPlayed: Map<String, Timestamp> = emptyMap()
 )
 
 data class PuzzleDescriptor(
@@ -30,7 +31,8 @@ data class PuzzleDescriptor(
     val estimatedDuration: Duration = Duration.ofMinutes(2),
     val isUserCreated: Boolean = false,
     val imageName: String? = null,
-    val lastPlayed: Instant? = null
+    val lastPlayed: Instant? = null,
+    val mastermindConfig: MastermindConfig? = null
 )
 
 data class PuzzleProgress(
@@ -99,4 +101,12 @@ data class PuzzleStats(
     val target: Int,
     val streak: Int,
     val timeRemainingSeconds: Int
+)
+
+data class MastermindConfig(
+    val colors: List<String>,
+    val slots: Int,
+    val guesses: Int,
+    val levels: Int,
+    val code: List<String>
 )

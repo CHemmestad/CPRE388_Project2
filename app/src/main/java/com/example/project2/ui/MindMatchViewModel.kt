@@ -28,6 +28,9 @@ class MindMatchViewModel(
     var puzzles: List<PuzzleDescriptor> = emptyList()
         private set
 
+    var userPuzzles: List<PuzzleDescriptor> = emptyList()
+        private set
+
     var progressByPuzzle: Map<String, PuzzleProgress> = emptyMap()
         private set
 
@@ -49,6 +52,11 @@ class MindMatchViewModel(
             // 1) load profile (also loads progress inside repository.loadActiveProfile)
             repository.loadActiveProfile(authRepo)
             profile = repository.activeProfile
+                // load puzzles
+                repository.loadPuzzlesFromFirebase()
+                puzzles = repository.puzzles
+                progressByPuzzle = repository.progressByPuzzle
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
 
             // 2) load puzzles
             repository.loadPuzzlesFromFirebase()

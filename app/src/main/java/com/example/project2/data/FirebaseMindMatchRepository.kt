@@ -6,6 +6,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import com.google.firebase.Timestamp
 
 class FirebaseMindMatchRepository : MindMatchRepository {
 
@@ -114,6 +115,27 @@ class FirebaseMindMatchRepository : MindMatchRepository {
             put(progress.puzzleId, progress)
         }
     }
+
+    /**
+     * Records that a puzzle was played at a given time for the active user.
+     * Stores under users/{userId}/puzzlesPlayed map in Firestore and updates cache.
+     */
+    suspend fun recordPuzzlePlayed(userId: String, puzzleId: String, playedAt: Timestamp = Timestamp.now()) {
+        db.collection("users")
+            .document(userId)
+            .update(mapOf("puzzlesPlayed.$puzzleId" to playedAt))
+            .await()
+
+        // keep activeProfile in sync so UI can reflect immediately
+        if (::activeProfile.isInitialized) {
+            val updated = activeProfile.puzzlesPlayed.toMutableMap().apply {
+                put(puzzleId, playedAt)
+            }
+            activeProfile = activeProfile.copy(puzzlesPlayed = updated)
+        }
+    }
+
+
 
     suspend fun loadPuzzleTypes(): List<String> {
         val snapshot = db.collection("puzzleTypes").get().await()

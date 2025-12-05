@@ -50,6 +50,7 @@ import com.example.project2.ui.screens.DashboardScreen
 import com.example.project2.ui.screens.DailyChallengeGeneratorScreen
 import com.example.project2.ui.screens.DifficultySelectionScreen
 import com.example.project2.ui.screens.JigsawPuzzleScreen
+import com.example.project2.ui.screens.MastermindScreen
 import com.example.project2.ui.screens.LeaderboardScreen
 import com.example.project2.ui.screens.LoginScreen
 import com.example.project2.ui.screens.PatternMemoryScreen
@@ -174,6 +175,7 @@ fun MindMatchApp(
                 modifier = Modifier.padding(innerPadding)
             ) {
                 val onPlayPuzzle: (PuzzleDescriptor) -> Unit = { puzzle ->
+                    viewModel.markPuzzlePlayed(puzzle.id)
                     if (puzzle.type == PuzzleType.JIGSAW) {
                         navController.navigate("jigsawDifficulty/${puzzle.id}")
                     } else {
@@ -199,7 +201,11 @@ fun MindMatchApp(
                     )
                 }
                 composable(MindMatchDestination.Create.route) {
-                    CreatePuzzleScreen()
+                    CreatePuzzleScreen(
+                        onPuzzleCreated = {
+                            viewModel.refreshPuzzles()
+                        }
+                    )
                 }
                 composable(MindMatchDestination.Daily.route) {
                     DailyChallengeScreen(
@@ -218,6 +224,7 @@ fun MindMatchApp(
                 composable(MindMatchDestination.Profile.route) {
                     ProfileScreen(
                         profile = viewModel.profile,
+                        userPuzzles = viewModel.userPuzzles,
                         onLogout = { isAuthenticated = false }
                     )
                 }
@@ -276,6 +283,18 @@ fun MindMatchApp(
                                                 },
                             onBack = { navController.popBackStack() }
                         )
+                        puzzle.type == PuzzleType.MASTERMIND -> {
+                            val config = puzzle.mastermindConfig
+                            if (config == null) {
+                                PuzzleNotReadyScreen(puzzle = puzzle)
+                            } else {
+                                MastermindScreen(
+                                    puzzle = puzzle,
+                                    config = config,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
                         else -> PuzzleNotReadyScreen(puzzle = puzzle)
                     }
                 }
