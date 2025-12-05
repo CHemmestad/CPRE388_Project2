@@ -58,8 +58,10 @@ fun PatternMemoryScreen(
     puzzle: PuzzleDescriptor,
     progress: PuzzleProgress?,
     modifier: Modifier = Modifier,
+    onProgressUpdated: (PuzzleProgress) -> Unit = {},  // NEW
     onBack: () -> Unit = {}
-) {
+)
+ {
     val context = LocalContext.current
     val startSoundPlayer = remember { MediaPlayer.create(context, R.raw.start_sound) }
     val colorSoundPlayer = remember { MediaPlayer.create(context, R.raw.newcolor_sound) }
@@ -77,8 +79,8 @@ fun PatternMemoryScreen(
     val tiles = remember { defaultPatternTiles() }
     val scope = rememberCoroutineScope()
 
-    var round by rememberSaveable { mutableStateOf(1) }
-    var phase by remember { mutableStateOf(PatternPhase.Preview) }
+     var round by rememberSaveable { mutableStateOf(progress?.currentLevel ?: 1) }
+     var phase by remember { mutableStateOf(PatternPhase.Preview) }
     var activeTileIndex by remember { mutableStateOf<Int?>(null) }
     var previewTrigger by remember { mutableStateOf(0) }
     var userStep by remember { mutableStateOf(0) }
@@ -116,6 +118,27 @@ fun PatternMemoryScreen(
         mistakes = 0
         previewTrigger += 1
     }
+     fun advanceRound() {
+         round += 1
+         startPreview()
+     }
+     fun buildProgress(): PuzzleProgress {
+         // Use existing progress as baseline if present
+         val previous = progress
+
+         val newBestScore = max(previous?.bestScore ?: 0, round)
+         val newLevelsUnlocked = max(previous?.levelsUnlocked ?: 0, round)
+
+         return PuzzleProgress(
+             puzzleId = puzzle.id,
+             currentLevel = round,
+             levelsUnlocked = newLevelsUnlocked,
+             bestScore = newBestScore,
+             bestTime = previous?.bestTime,   // you can update this later with real timing
+             inProgressState = null           // later: JSON of exact game state if you want
+         )
+     }
+
 
     fun handleTileTap(tileIndex: Int) {
         if (phase != PatternPhase.Recall) return
@@ -132,20 +155,21 @@ fun PatternMemoryScreen(
             userStep += 1
             if (userStep == pattern.size) {
                 phase = PatternPhase.Completed
+                // user successfully completed this round -> save progress
+                onProgressUpdated(buildProgress())
             }
         } else {
             mistakes += 1
             incorrectSoundPlayer.playFromStart()
             phase = PatternPhase.Failed
+            // even on failure we can save current round as progress
+            onProgressUpdated(buildProgress())
         }
+
     }
 
-    fun advanceRound() {
-        round += 1
-        startPreview()
-    }
 
-    Column(
+     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),

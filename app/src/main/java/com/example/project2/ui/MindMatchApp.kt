@@ -267,7 +267,10 @@ fun MindMatchApp(
                         puzzle.type == PuzzleType.PATTERN_MEMORY -> PatternMemoryScreen(
                             puzzle = puzzle,
                             progress = progress,
-                            onBack = { navController.popBackStack() },
+                            onProgressUpdated = { newProgress ->
+                                viewModel.saveProgress(newProgress)   // <-- writes to Firebase + updates cache
+                            },
+                            onBack = { navController.popBackStack() }
                         )
                         else -> PuzzleNotReadyScreen(puzzle = puzzle)
                     }
