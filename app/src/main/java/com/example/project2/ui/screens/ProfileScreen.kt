@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -30,10 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.PlayerProfile
+import com.example.project2.data.PuzzleDescriptor
 
 @Composable
 fun ProfileScreen(
     profile: PlayerProfile?,
+    userPuzzles: List<PuzzleDescriptor> = emptyList(),
     modifier: Modifier = Modifier,
     onLogout: () -> Unit = {}
 ) {
@@ -43,7 +47,8 @@ fun ProfileScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
@@ -82,9 +87,9 @@ fun ProfileScreen(
                             Text(
                                 text = displayName.firstOrNull()?.uppercase() ?: "?",
                                 style = MaterialTheme.typography.headlineMedium
-                            )
-                        }
-                    }
+        )
+    }
+}
                     Column {
                         Text(
                             text = displayName,
@@ -141,6 +146,31 @@ fun ProfileScreen(
                         onClick = onLogout
                     ) {
                         Text("Log out")
+                    }
+                }
+            }
+        }
+
+        if (userPuzzles.isNotEmpty()) {
+            Text(
+                text = "Your puzzles",
+                style = MaterialTheme.typography.titleMedium
+            )
+            userPuzzles.forEach { puzzle ->
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(puzzle.title, style = MaterialTheme.typography.titleMedium)
+                        Text(puzzle.description, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            text = "Type: ${puzzle.type.displayName} • Difficulty: ${puzzle.difficulty}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

@@ -19,13 +19,28 @@ fun PuzzleDescriptor.toFirebase(): FirebasePuzzle {
         isUserCreated = isUserCreated,
         lastPlayed = lastPlayed?.let {
             Timestamp(it.epochSecond, 0) // Instant → Timestamp
-        }
+        },
+        mastermindColors = mastermindConfig?.colors,
+        mastermindSlots = mastermindConfig?.slots,
+        mastermindGuesses = mastermindConfig?.guesses,
+        mastermindLevels = mastermindConfig?.levels,
+        mastermindCode = mastermindConfig?.code
     )
 }
 
 fun FirebasePuzzle.toPuzzle(): PuzzleDescriptor {
     fun normalizeEnum(value: String): String =
         value.trim().replace("\\s+".toRegex(), "_").uppercase()
+
+    val config = if (mastermindColors != null && mastermindSlots != null && mastermindGuesses != null && mastermindLevels != null && mastermindCode != null) {
+        MastermindConfig(
+            colors = mastermindColors,
+            slots = mastermindSlots,
+            guesses = mastermindGuesses,
+            levels = mastermindLevels,
+            code = mastermindCode
+        )
+    } else null
 
     return PuzzleDescriptor(
         id = id,
@@ -38,6 +53,7 @@ fun FirebasePuzzle.toPuzzle(): PuzzleDescriptor {
             ?: Difficulty.MEDIUM, // default if malformed
         estimatedDuration = Duration.ofSeconds(estimatedDurationSeconds),
         isUserCreated = isUserCreated,
-        lastPlayed = lastPlayed?.toDate()?.toInstant() // Timestamp → Instant
+        lastPlayed = lastPlayed?.toDate()?.toInstant(), // Timestamp → Instant
+        mastermindConfig = config
     )
 }

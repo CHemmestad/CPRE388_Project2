@@ -45,6 +45,9 @@ class MindMatchViewModel(
     var puzzles: List<PuzzleDescriptor> = emptyList()
         private set
 
+    var userPuzzles: List<PuzzleDescriptor> = emptyList()
+        private set
+
     var progressByPuzzle: Map<String, PuzzleProgress> = emptyMap()
         private set
 
@@ -62,10 +65,23 @@ class MindMatchViewModel(
 
                 repository.loadPuzzlesFromFirebase()
                 puzzles = repository.puzzles
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 isLoading = false
+            }
+        }
+    }
+
+    fun refreshPuzzles() {
+        viewModelScope.launch {
+            try {
+                repository.loadPuzzlesFromFirebase()
+                puzzles = repository.puzzles
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

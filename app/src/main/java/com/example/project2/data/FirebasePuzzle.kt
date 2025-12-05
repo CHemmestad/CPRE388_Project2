@@ -15,5 +15,10 @@ data class FirebasePuzzle(
     val difficulty: String = "",          // enum to string
     val estimatedDurationSeconds: Long = 120, // Duration to seconds
     val isUserCreated: Boolean = false,
-    val lastPlayed: Timestamp? = null     // Instant to Timestamp
+    val lastPlayed: Timestamp? = null,     // Instant to Timestamp
+    val mastermindColors: List<String>? = null,
+    val mastermindSlots: Int? = null,
+    val mastermindGuesses: Int? = null,
+    val mastermindLevels: Int? = null,
+    val mastermindCode: List<String>? = null
 )
