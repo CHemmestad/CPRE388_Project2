@@ -175,6 +175,7 @@ fun MindMatchApp(
                 modifier = Modifier.padding(innerPadding)
             ) {
                 val onPlayPuzzle: (PuzzleDescriptor) -> Unit = { puzzle ->
+                    viewModel.markPuzzlePlayed(puzzle.id)
                     if (puzzle.type == PuzzleType.JIGSAW) {
                         navController.navigate("jigsawDifficulty/${puzzle.id}")
                     } else {

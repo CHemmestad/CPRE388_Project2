@@ -28,6 +28,7 @@ import com.example.project2.data.PuzzleProgress
 import com.example.project2.ui.util.formatAsDisplay
 import com.example.project2.ui.widgets.PuzzleCard
 import com.example.project2.ui.widgets.StatChip
+import com.google.firebase.Timestamp
 
 @Composable
 fun DashboardScreen(
@@ -59,15 +60,19 @@ fun DashboardScreen(
             text = "Continue Playing",
             style = MaterialTheme.typography.titleMedium
         )
+        val playedByUser: Map<String, Timestamp> = profile?.puzzlesPlayed ?: emptyMap()
+        val playablePuzzles = puzzles.filter { playedByUser.containsKey(it.id) }
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(puzzles) { puzzle ->
+            items(playablePuzzles) { puzzle ->
                 val puzzleProgress = progress[puzzle.id]
+                val lastPlayed = playedByUser[puzzle.id]?.toDate()?.toInstant()
                 PuzzleCard(
                     puzzle = puzzle,
                     progress = puzzleProgress,
+                    lastPlayed = lastPlayed,
                     actionIcon = Icons.Default.PlayArrow,
                     actionText = "Resume",
                     onActionClick = { onPlayPuzzle(puzzle) }
