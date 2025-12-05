@@ -58,12 +58,22 @@ class MindMatchViewModel(
                 progressByPuzzle = repository.progressByPuzzle
                 userPuzzles = puzzles.filter { it.creatorId == profile?.id }
 
-                // TODO: hook dailyChallenge/leaderboard when implemented in repo
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isLoading = false
-            }
+            // 2) load puzzles
+            repository.loadPuzzlesFromFirebase()
+            puzzles = repository.puzzles
+
+            // 3) expose progress to UI
+            progressByPuzzle = repository.progressByPuzzle
+
+            // 4) later when implement these in the repo, hook them here:
+            // dailyChallenge = repository.dailyChallenge
+            repository.loadLeaderboard()
+            leaderboard = repository.leaderboard
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isLoading = false
+        }
     }
 
     /**
@@ -78,24 +88,20 @@ class MindMatchViewModel(
         }
     }
 
-    fun refreshPuzzles() {
+    fun submitLeaderboardScore(puzzleId: String, score: Int) {
+        val name = profile?.displayName ?: "Player"
         viewModelScope.launch {
             try {
-                repository.loadPuzzlesFromFirebase()
-                puzzles = repository.puzzles
-                progressByPuzzle = repository.progressByPuzzle
-                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+                repository.submitLeaderboardEntry(
+                    puzzleId = puzzleId,
+                    playerName = name,
+                    score = score
+                )
+                leaderboard = repository.leaderboard
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
     }
 
-    fun markPuzzlePlayed(puzzleId: String) {
-        val userId = authRepo.getCurrentUserId() ?: return
-        viewModelScope.launch {
-            repository.recordPuzzlePlayed(userId, puzzleId)
-            profile = repository.activeProfile
-        }
-    }
 }

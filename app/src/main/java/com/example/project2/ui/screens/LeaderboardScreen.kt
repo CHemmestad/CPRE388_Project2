@@ -45,12 +45,14 @@ fun LeaderboardScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             leaderboard.entries.forEach { (puzzleId, entries) ->
-                item(key = puzzleId) {
-                    val puzzle = puzzles[puzzleId]
-                    LeaderboardCard(
-                        puzzleTitle = puzzle?.title ?: "Unknown puzzle",
-                        entries = entries
-                    )
+                val puzzle = puzzles[puzzleId]
+                if (puzzle != null && entries.isNotEmpty()) {
+                    item(key = puzzleId) {
+                        LeaderboardCard(
+                            puzzle = puzzle,
+                            entries = entries
+                        )
+                    }
                 }
             }
         }
@@ -59,7 +61,7 @@ fun LeaderboardScreen(
 
 @Composable
 private fun LeaderboardCard(
-    puzzleTitle: String,
+    puzzle: PuzzleDescriptor,
     entries: List<LeaderboardEntry>
 ) {
     Card {
@@ -69,20 +71,74 @@ private fun LeaderboardCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Card title: puzzle type + name
             Text(
-                text = puzzleTitle,
+                text = "${puzzle.type.displayName} • ${puzzle.title}",
                 style = MaterialTheme.typography.titleMedium
             )
+
+            // Column headers
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Rank",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Player",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1.5f)
+                )
+                Text(
+                    text = "Puzzle",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(2f)
+                )
+                Text(
+                    text = "Score",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
             Divider()
+
+            // Rows: rank, player, puzzle type+name, score
             entries.forEachIndexed { index, entry ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Rank
                     Text(
-                        text = "#${index + 1} ${entry.playerName}",
+                        text = "#${index + 1}",
                         fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
                     )
+
+                    // Player
+                    Text(
+                        text = entry.playerName,
+                        modifier = Modifier.weight(1.5f),
+                        fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
+                    )
+
+                    // Puzzle type + name
+                    Text(
+                        text = "${puzzle.type.displayName} – ${puzzle.title}",
+                        modifier = Modifier.weight(2f),
+                        fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
+                    )
+
+                    // Score
                     Text(
                         text = entry.score.toString(),
                         fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
