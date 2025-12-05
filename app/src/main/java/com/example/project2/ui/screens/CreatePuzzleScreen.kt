@@ -1,5 +1,6 @@
 package com.example.project2.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,28 +41,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.project2.data.AuthRepository
 import com.example.project2.data.Difficulty
 import com.example.project2.data.FirebaseMindMatchRepository
+import com.example.project2.data.PuzzleDescriptor
+import com.example.project2.data.PuzzleType
+import com.example.project2.data.MastermindConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePuzzleScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPuzzleCreated: () -> Unit = {}
 ) {
+    val authRepository = remember { AuthRepository() }
     val repository = remember { FirebaseMindMatchRepository() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val fallbackOptions = listOf("Mastermind", "Color Match", "Jigsaw")
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var creatorId by remember { mutableStateOf(authRepository.getCurrentUserId() ?: "unknown") }
+    var estimatedDurationSeconds by remember { mutableIntStateOf(120) }
     var puzzleType by remember { mutableStateOf("") }
     var puzzleTypeOptions by remember { mutableStateOf<List<String>>(emptyList()) }
     var isTypeMenuExpanded by remember { mutableStateOf(false) }
     var selectedDifficulty by remember { mutableStateOf(Difficulty.MEDIUM) }
-    var adaptiveRules by remember { mutableStateOf("") }
     var mastermindSelectedColors by remember { mutableStateOf<Set<String>>(emptySet()) }
     var mastermindSlots by remember { mutableIntStateOf(4) }
     var mastermindGuesses by remember { mutableIntStateOf(8) }
@@ -117,6 +129,14 @@ fun CreatePuzzleScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
+                    value = creatorId,
+                    onValueChange = { },
+                    readOnly = true,
+                    enabled = false,
+                    label = { Text("Creator ID (from auth)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("Puzzle title") },
@@ -129,6 +149,15 @@ fun CreatePuzzleScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
+                )
+                OutlinedTextField(
+                    value = estimatedDurationSeconds.toString(),
+                    onValueChange = { value ->
+                        value.toIntOrNull()?.let { estimatedDurationSeconds = it.coerceAtLeast(30) }
+                    },
+                    label = { Text("Estimated duration (seconds)") },
+                    supportingText = { Text("Defaults to 120s if not provided. Minimum 30s.") },
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 ExposedDropdownMenuBox(
@@ -244,7 +273,49 @@ fun CreatePuzzleScreen(
             }
             Button(
                 modifier = Modifier.weight(1f),
-                onClick = { /* TODO: Create puzzle and attach to profile */ }
+                onClick = {
+                    scope.launch {
+                        try {
+                            val typeEnum = resolvePuzzleType(puzzleType)
+                            val duration = Duration.ofSeconds(estimatedDurationSeconds.toLong())
+                            val mastermindConfig = if (typeEnum == PuzzleType.MASTERMIND && mastermindSelectedColors.isNotEmpty()) {
+                                val adjustedCode = adjustMastermindCode(mastermindSelectedColors, mastermindSlots, mastermindCode).map {
+                                    if (it.isBlank()) mastermindSelectedColors.first() else it
+                                }
+                                MastermindConfig(
+                                    colors = mastermindSelectedColors.toList(),
+                                    slots = mastermindSlots,
+                                    guesses = mastermindGuesses,
+                                    levels = mastermindLevels,
+                                    code = adjustedCode
+                                )
+                            } else null
+
+                            val descriptor = PuzzleDescriptor(
+                                id = UUID.randomUUID().toString(),
+                                title = title.ifBlank { "Untitled Puzzle" },
+                                description = description.ifBlank { "Created in-app" },
+                                type = typeEnum,
+                                creatorId = creatorId.ifBlank { "unknown" },
+                                difficulty = selectedDifficulty,
+                                estimatedDuration = duration,
+                                isUserCreated = true,
+                                mastermindConfig = mastermindConfig
+                            )
+                            withContext(Dispatchers.IO) {
+                                repository.savePuzzleToFirebase(descriptor)
+                            }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Puzzle created!", Toast.LENGTH_SHORT).show()
+                            }
+                            onPuzzleCreated()
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Failed to create puzzle: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
             ) {
                 Icon(Icons.Filled.CloudUpload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -411,8 +482,14 @@ private fun adjustMastermindCode(colors: Set<String>, slots: Int, current: List<
     if (slots <= 0) return emptyList()
     if (colors.isEmpty()) return List(slots) { "" }
     val available = colors.toList()
-    val resized = MutableList(slots) { index ->
+    return MutableList(slots) { index ->
         current.getOrNull(index)?.takeIf { it in colors } ?: available.first()
     }
-    return resized
+}
+
+private fun resolvePuzzleType(selected: String): PuzzleType {
+    val normalized = selected.trim().replace("\\s+".toRegex(), "_").uppercase()
+    return PuzzleType.entries.firstOrNull { entry ->
+        entry.name == normalized || entry.displayName.equals(selected, ignoreCase = true)
+    } ?: PuzzleType.PATTERN_MEMORY
 }

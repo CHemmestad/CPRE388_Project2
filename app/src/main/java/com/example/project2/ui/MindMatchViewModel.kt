@@ -28,6 +28,9 @@ class MindMatchViewModel(
     var puzzles: List<PuzzleDescriptor> = emptyList()
         private set
 
+    var userPuzzles: List<PuzzleDescriptor> = emptyList()
+        private set
+
     var progressByPuzzle: Map<String, PuzzleProgress> = emptyMap()
         private set
 
@@ -49,22 +52,18 @@ class MindMatchViewModel(
             // 1) load profile (also loads progress inside repository.loadActiveProfile)
             repository.loadActiveProfile(authRepo)
             profile = repository.activeProfile
+                // load puzzles
+                repository.loadPuzzlesFromFirebase()
+                puzzles = repository.puzzles
+                progressByPuzzle = repository.progressByPuzzle
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
 
-            // 2) load puzzles
-            repository.loadPuzzlesFromFirebase()
-            puzzles = repository.puzzles
-
-            // 3) expose progress to UI
-            progressByPuzzle = repository.progressByPuzzle
-
-            // 4) if/when you implement these in the repo, hook them here:
-            // dailyChallenge = repository.dailyChallenge
-            // leaderboard = repository.leaderboard
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            isLoading = false
-        }
+                // TODO: hook dailyChallenge/leaderboard when implemented in repo
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoading = false
+            }
     }
 
     /**
@@ -76,6 +75,19 @@ class MindMatchViewModel(
         viewModelScope.launch {
             repository.saveProgress(userId, progress)
             progressByPuzzle = repository.progressByPuzzle
+        }
+    }
+
+    fun refreshPuzzles() {
+        viewModelScope.launch {
+            try {
+                repository.loadPuzzlesFromFirebase()
+                puzzles = repository.puzzles
+                progressByPuzzle = repository.progressByPuzzle
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }
