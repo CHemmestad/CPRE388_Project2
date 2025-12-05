@@ -57,9 +57,10 @@ class MindMatchViewModel(
             // 3) expose progress to UI
             progressByPuzzle = repository.progressByPuzzle
 
-            // 4) if/when you implement these in the repo, hook them here:
+            // 4) later when implement these in the repo, hook them here:
             // dailyChallenge = repository.dailyChallenge
-            // leaderboard = repository.leaderboard
+            repository.loadLeaderboard()
+            leaderboard = repository.leaderboard
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
@@ -78,4 +79,21 @@ class MindMatchViewModel(
             progressByPuzzle = repository.progressByPuzzle
         }
     }
+
+    fun submitLeaderboardScore(puzzleId: String, score: Int) {
+        val name = profile?.displayName ?: "Player"
+        viewModelScope.launch {
+            try {
+                repository.submitLeaderboardEntry(
+                    puzzleId = puzzleId,
+                    playerName = name,
+                    score = score
+                )
+                leaderboard = repository.leaderboard
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
 }

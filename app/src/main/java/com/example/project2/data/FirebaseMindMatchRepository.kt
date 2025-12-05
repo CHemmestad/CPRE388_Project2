@@ -29,6 +29,8 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     override val leaderboard: Map<String, List<LeaderboardEntry>>
         get() = cachedLeaderboard
 
+
+
     override val dailyChallenge: DailyChallenge
         get() = throw NotImplementedError("Firebase daily challenge not implemented yet.")
 
@@ -113,8 +115,6 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         }
     }
 
-    // --------- Optional: puzzle type helpers you already had ---------
-
     suspend fun loadPuzzleTypes(): List<String> {
         val snapshot = db.collection("puzzleTypes").get().await()
         return snapshot.documents.mapNotNull { doc ->
@@ -140,4 +140,48 @@ class FirebaseMindMatchRepository : MindMatchRepository {
                 .await()
         }
     }
+
+    // ------- LEADERBOARD -------
+
+    suspend fun loadLeaderboard() {
+        val snapshot = db.collection("leaderboard")
+            .get()
+            .await()
+
+        val entries = snapshot
+            .toObjects(FirebaseLeaderboardEntry::class.java)
+            .map { it.toEntry() }
+
+        // group by puzzleId and sort each list by score desc
+        cachedLeaderboard = entries
+            .groupBy { it.puzzleId }
+            .mapValues { (_, list) ->
+                list.sortedByDescending { it.score }
+                    .take(20) // keep top 20 per puzzle
+            }
+    }
+
+    /**
+     * Add a new leaderboard entry for a puzzle.
+     */
+    suspend fun submitLeaderboardEntry(
+        puzzleId: String,
+        playerName: String,
+        score: Int
+    ) {
+        val entry = LeaderboardEntry(
+            puzzleId = puzzleId,
+            playerName = playerName,
+            score = score,
+            recordedAt = java.time.Instant.now()
+        )
+
+        db.collection("leaderboard")
+            .add(entry.toFirebase())
+            .await()
+
+        // refresh cache \
+        loadLeaderboard()
+    }
+
 }
