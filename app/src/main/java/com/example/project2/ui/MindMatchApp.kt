@@ -254,7 +254,8 @@ fun MindMatchApp(
                         JigsawPuzzleScreen(
                             puzzle = puzzle,
                             onBack = { navController.popBackStack() },
-                            gridSize = gridSize
+                            gridSize = gridSize,
+                            viewModel = viewModel
                         )
                     } else {
                         PuzzleNotFoundScreen()

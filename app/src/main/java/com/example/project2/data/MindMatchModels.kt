@@ -31,6 +31,8 @@ data class PuzzleDescriptor(
     val estimatedDuration: Duration = Duration.ofMinutes(2),
     val isUserCreated: Boolean = false,
     val imageName: String? = null,
+    val imageUrl: String? = null,
+    val localImageResId: Int? = null,
     val lastPlayed: Instant? = null,
     val mastermindConfig: MastermindConfig? = null
 )
