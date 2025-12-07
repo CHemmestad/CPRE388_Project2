@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -75,7 +76,8 @@ fun DashboardScreen(
                     lastPlayed = lastPlayed,
                     actionIcon = Icons.Default.PlayArrow,
                     actionText = "Resume",
-                    onActionClick = { onPlayPuzzle(puzzle) }
+                    onActionClick = { onPlayPuzzle(puzzle) },
+                    modifier = Modifier.widthIn(max = 320.dp)
                 )
             }
         }

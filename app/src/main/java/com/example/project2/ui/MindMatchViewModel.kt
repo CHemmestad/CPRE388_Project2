@@ -34,13 +34,19 @@ class MindMatchViewModel(
     var progressByPuzzle: Map<String, PuzzleProgress> = emptyMap()
         private set
 
-    var dailyChallenge: DailyChallenge? = null
+    var dailyChallenge by mutableStateOf<DailyChallenge?>(null)
         private set
 
     var leaderboard: Map<String, List<LeaderboardEntry>> = emptyMap()
         private set
 
     init {
+        viewModelScope.launch {
+            loadInitialData()
+        }
+    }
+
+    fun reloadData() {
         viewModelScope.launch {
             loadInitialData()
         }
@@ -58,7 +64,11 @@ class MindMatchViewModel(
                 progressByPuzzle = repository.progressByPuzzle
                 userPuzzles = puzzles.filter { it.creatorId == profile?.id }
 
-                // TODO: hook dailyChallenge/leaderboard when implemented in repo
+                dailyChallenge = repository.loadLatestDailyChallenge()
+                dailyChallenge?.puzzle?.let { challengePuzzle ->
+                    puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
+                }
+                // TODO: hook leaderboard when implemented in repo
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -96,6 +106,33 @@ class MindMatchViewModel(
         viewModelScope.launch {
             repository.recordPuzzlePlayed(userId, puzzleId)
             profile = repository.activeProfile
+        }
+    }
+
+    fun deleteUserPuzzle(puzzleId: String) {
+        viewModelScope.launch {
+            try {
+                repository.deletePuzzleFromFirebase(puzzleId)
+                puzzles = repository.puzzles
+                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
+                progressByPuzzle = repository.progressByPuzzle
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun refreshDailyChallenge() {
+        viewModelScope.launch {
+            try {
+                val latest = repository.loadLatestDailyChallenge()
+                dailyChallenge = latest
+                latest?.puzzle?.let { challengePuzzle ->
+                    puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }

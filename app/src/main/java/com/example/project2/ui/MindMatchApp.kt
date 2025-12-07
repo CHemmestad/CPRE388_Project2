@@ -62,6 +62,7 @@ import com.example.project2.ui.theme.CharcoalSurface
 import com.example.project2.ui.theme.RoyalBluePrimary
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 
 
@@ -111,7 +112,10 @@ fun MindMatchApp(
 
     if (!isAuthenticated) {
         AuthNavHost(
-            onAuthenticated = { isAuthenticated = true }
+            onAuthenticated = {
+                viewModel.reloadData()
+                isAuthenticated = true
+            }
         )
     } else {
         val navController = rememberNavController()
@@ -184,13 +188,18 @@ fun MindMatchApp(
                 }
 
                 composable(MindMatchDestination.Dashboard.route) {
+                    LaunchedEffect(Unit) {
+                        viewModel.refreshDailyChallenge()
+                    }
                     DashboardScreen(
                         profile = viewModel.profile,
                         puzzles = viewModel.puzzles,
                         progress = viewModel.progressByPuzzle,
                         dailyChallenge = viewModel.dailyChallenge,
                         onPlayPuzzle = onPlayPuzzle,
-                        onViewDailyChallenge = { navController.navigate(DAILY_PLAY_ROUTE) }
+                        onViewDailyChallenge = {
+                            viewModel.dailyChallenge?.puzzle?.let { onPlayPuzzle(it) }
+                        }
                     )
                 }
                 composable(MindMatchDestination.Puzzles.route) {
@@ -225,6 +234,7 @@ fun MindMatchApp(
                     ProfileScreen(
                         profile = viewModel.profile,
                         userPuzzles = viewModel.userPuzzles,
+                        onDeletePuzzle = { puzzle -> viewModel.deleteUserPuzzle(puzzle.id) },
                         onLogout = { isAuthenticated = false }
                     )
                 }
@@ -266,7 +276,10 @@ fun MindMatchApp(
                     arguments = listOf(navArgument(PUZZLE_ID_ARG) { type = NavType.StringType })
                 ) { backStackEntry ->
                     val puzzleId = backStackEntry.arguments?.getString(PUZZLE_ID_ARG)
-                    val puzzle = puzzleId?.let { id -> viewModel.puzzles.firstOrNull { it.id == id } }
+                    val puzzle = puzzleId?.let { id ->
+                        viewModel.puzzles.firstOrNull { it.id == id }
+                            ?: viewModel.dailyChallenge?.puzzle?.takeIf { it.id == id }
+                    }
                     val progress = puzzleId?.let { viewModel.progressByPuzzle[it] }
 
                     when {

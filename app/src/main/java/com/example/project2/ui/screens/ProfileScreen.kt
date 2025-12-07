@@ -39,6 +39,7 @@ fun ProfileScreen(
     profile: PlayerProfile?,
     userPuzzles: List<PuzzleDescriptor> = emptyList(),
     modifier: Modifier = Modifier,
+    onDeletePuzzle: (PuzzleDescriptor) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     var displayName by remember(profile!!.id) { mutableStateOf(profile!!.displayName) }
@@ -171,6 +172,16 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Button(onClick = { onDeletePuzzle(puzzle) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete puzzle")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Delete")
+                            }
+                        }
                     }
                 }
             }
