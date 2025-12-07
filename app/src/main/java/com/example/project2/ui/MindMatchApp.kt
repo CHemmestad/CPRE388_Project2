@@ -289,7 +289,11 @@ fun MindMatchApp(
                             progress = progress,
                             onProgressUpdated = { newProgress ->
                                 viewModel.saveProgress(newProgress)   // <-- writes to Firebase + updates cache
-                            },
+                                viewModel.submitLeaderboardScore(
+                                    puzzleId = puzzle.id,
+                                    score = newProgress.bestScore
+                                )
+                                                },
                             onBack = { navController.popBackStack() }
                         )
                         puzzle.type == PuzzleType.MASTERMIND -> {

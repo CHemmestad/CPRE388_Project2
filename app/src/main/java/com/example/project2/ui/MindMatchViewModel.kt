@@ -58,12 +58,11 @@ class MindMatchViewModel(
             // 1) load profile (also loads progress inside repository.loadActiveProfile)
             repository.loadActiveProfile(authRepo)
             profile = repository.activeProfile
-                // load puzzles
-                repository.loadPuzzlesFromFirebase()
-                puzzles = repository.puzzles
-                progressByPuzzle = repository.progressByPuzzle
-                userPuzzles = puzzles.filter { it.creatorId == profile?.id }
-
+            // load puzzles
+            repository.loadPuzzlesFromFirebase()
+            puzzles = repository.puzzles
+            progressByPuzzle = repository.progressByPuzzle
+            userPuzzles = puzzles.filter { it.creatorId == profile?.id }
                 dailyChallenge = repository.loadLatestDailyChallenge()
                 dailyChallenge?.puzzle?.let { challengePuzzle ->
                     puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
@@ -74,6 +73,22 @@ class MindMatchViewModel(
             } finally {
                 isLoading = false
             }
+            // 2) load puzzles
+            repository.loadPuzzlesFromFirebase()
+            puzzles = repository.puzzles
+
+            // 3) expose progress to UI
+            progressByPuzzle = repository.progressByPuzzle
+
+            // 4) later when implement these in the repo, hook them here:
+            // dailyChallenge = repository.dailyChallenge
+            repository.loadLeaderboard()
+            leaderboard = repository.leaderboard
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isLoading = false
+        }
     }
 
     /**
@@ -85,6 +100,22 @@ class MindMatchViewModel(
         viewModelScope.launch {
             repository.saveProgress(userId, progress)
             progressByPuzzle = repository.progressByPuzzle
+        }
+    }
+
+    fun submitLeaderboardScore(puzzleId: String, score: Int) {
+        val name = profile?.displayName ?: "Player"
+        viewModelScope.launch {
+            try {
+                repository.submitLeaderboardEntry(
+                    puzzleId = puzzleId,
+                    playerName = name,
+                    score = score
+                )
+                leaderboard = repository.leaderboard
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -100,7 +131,6 @@ class MindMatchViewModel(
             }
         }
     }
-
     fun markPuzzlePlayed(puzzleId: String) {
         val userId = authRepo.getCurrentUserId() ?: return
         viewModelScope.launch {
