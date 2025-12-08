@@ -31,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.example.project2.data.PlayerProfile
 import com.example.project2.data.PuzzleDescriptor
 
@@ -42,6 +44,7 @@ fun ProfileScreen(
     onDeletePuzzle: (PuzzleDescriptor) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var displayName by remember(profile!!.id) { mutableStateOf(profile!!.displayName) }
     var bio by remember(profile.id) { mutableStateOf(profile!!.bio) }
 
@@ -176,7 +179,10 @@ fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            Button(onClick = { onDeletePuzzle(puzzle) }) {
+                            Button(onClick = {
+                                onDeletePuzzle(puzzle)
+                                Toast.makeText(context, "Puzzle deleted", Toast.LENGTH_SHORT).show()
+                            }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Delete puzzle")
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Delete")

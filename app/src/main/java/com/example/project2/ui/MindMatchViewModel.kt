@@ -25,19 +25,19 @@ class MindMatchViewModel(
     var profile: PlayerProfile? = null
         private set
 
-    var puzzles: List<PuzzleDescriptor> = emptyList()
+    var puzzles by mutableStateOf<List<PuzzleDescriptor>>(emptyList())
         private set
 
-    var userPuzzles: List<PuzzleDescriptor> = emptyList()
+    var userPuzzles by mutableStateOf<List<PuzzleDescriptor>>(emptyList())
         private set
 
-    var progressByPuzzle: Map<String, PuzzleProgress> = emptyMap()
+    var progressByPuzzle by mutableStateOf<Map<String, PuzzleProgress>>(emptyMap())
         private set
 
     var dailyChallenge by mutableStateOf<DailyChallenge?>(null)
         private set
 
-    var leaderboard: Map<String, List<LeaderboardEntry>> = emptyMap()
+    var leaderboard by mutableStateOf<Map<String, List<LeaderboardEntry>>>(emptyMap())
         private set
 
     init {
@@ -58,30 +58,17 @@ class MindMatchViewModel(
             // 1) load profile (also loads progress inside repository.loadActiveProfile)
             repository.loadActiveProfile(authRepo)
             profile = repository.activeProfile
-            // load puzzles
+
+            // 2) load puzzles and progress
             repository.loadPuzzlesFromFirebase()
             puzzles = repository.puzzles
             progressByPuzzle = repository.progressByPuzzle
             userPuzzles = puzzles.filter { it.creatorId == profile?.id }
-                dailyChallenge = repository.loadLatestDailyChallenge()
-                dailyChallenge?.puzzle?.let { challengePuzzle ->
-                    puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
-                }
-                // TODO: hook leaderboard when implemented in repo
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isLoading = false
-            }
-            // 2) load puzzles
-            repository.loadPuzzlesFromFirebase()
-            puzzles = repository.puzzles
 
-            // 3) expose progress to UI
-            progressByPuzzle = repository.progressByPuzzle
+            // 3) load latest daily challenge and merge its puzzle into the list
+            mergeDailyChallenge(repository.loadLatestDailyChallenge())
 
-            // 4) later when implement these in the repo, hook them here:
-            // dailyChallenge = repository.dailyChallenge
+            // 4) leaderboard
             repository.loadLeaderboard()
             leaderboard = repository.leaderboard
         } catch (e: Exception) {
@@ -155,14 +142,18 @@ class MindMatchViewModel(
     fun refreshDailyChallenge() {
         viewModelScope.launch {
             try {
-                val latest = repository.loadLatestDailyChallenge()
-                dailyChallenge = latest
-                latest?.puzzle?.let { challengePuzzle ->
-                    puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
-                }
+                mergeDailyChallenge(repository.loadLatestDailyChallenge())
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    private fun mergeDailyChallenge(latest: DailyChallenge?) {
+        dailyChallenge = latest
+        val challengePuzzle = latest?.puzzle ?: return
+
+        // Replace any existing entry with the same id
+        puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
     }
 }

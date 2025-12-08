@@ -109,6 +109,7 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         val doc = snapshot.documents.firstOrNull() ?: return null
         val rawJson = doc.getString("rawJson") ?: return null
         val createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
+        val puzzleId = "${doc.id}_${createdAt.seconds}"
 
         val parsed = runCatching { JSONObject(rawJson) }.getOrNull() ?: return null
         val title = parsed.optString("title", "Daily Mastermind")
@@ -135,7 +136,7 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         )
 
         val puzzle = PuzzleDescriptor(
-            id = doc.id,
+            id = puzzleId,
             title = title,
             description = description,
             type = PuzzleType.MASTERMIND,
