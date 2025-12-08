@@ -2,6 +2,7 @@ package com.example.project2.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import java.util.concurrent.TimeUnit
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,16 +40,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.project2.data.PuzzleDescriptor
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.example.project2.ui.MindMatchViewModel
 
 @Composable
 fun JigsawPuzzleScreen(
     puzzle: PuzzleDescriptor,
     onBack: () -> Unit,
-    gridSize: Int, // <-- 1. ADD gridSize AS A PARAMETER
+    gridSize: Int,
+    viewModel: MindMatchViewModel
 ) {
-    // --- STATE MANAGEMENT ---
+    var elapsedTime by remember { mutableStateOf(0L) }
     var puzzlePieces by remember { mutableStateOf<List<PuzzlePiece>>(emptyList()) }
     var boardSize by remember { mutableStateOf(IntSize.Zero) }
     var boardTopLeft by remember { mutableStateOf(Offset.Zero) }
@@ -57,40 +64,86 @@ fun JigsawPuzzleScreen(
     var isSolved by remember { mutableStateOf(false) }
     var fingerDragOffset by remember { mutableStateOf(Offset.Zero) }
 
-    // --- LOGIC ---
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var scoreSaved by remember { mutableStateOf(false) }
 
     fun checkForSolution() {
         if (puzzlePieces.isEmpty()) return
-        // A puzzle is solved if every piece's ID matches its current position in the list
-        val solved = puzzlePieces.all { piece -> piece.id == puzzlePieces.indexOf(piece) }
+        val solved = puzzlePieces.all { piece ->
+            piece.id == puzzlePieces.indexOf(piece)
+        }
         if (solved) {
             isSolved = true
         }
     }
 
-    // This effect runs when the board is measured or the difficulty (gridSize) changes
-    LaunchedEffect(boardSize, gridSize) { // <-- 2. ADD gridSize TO KEY
-        if (boardSize != IntSize.Zero && puzzlePieces.isEmpty()) {
-            val availableImages = listOf("jigsaw_image1", "jigsaw_image2", "jigsaw_image3", "jigsaw_image4")
-            val randomImageName = availableImages.random()
-            val imageResId = context.resources.getIdentifier(randomImageName, "drawable", context.packageName)
+    LaunchedEffect(key1 = isSolved) {
+        if (isSolved && !scoreSaved) {
+            scoreSaved = true
+            val timeInSeconds = elapsedTime
 
-            if (imageResId != 0) {
-                val originalBitmap = BitmapFactory.decodeResource(context.resources, imageResId)
-                val scaled = Bitmap.createScaledBitmap(
-                    originalBitmap, boardSize.width, boardSize.height, false
-                ).asImageBitmap()
+            val difficulty = when (gridSize) {
+                3 -> com.example.project2.data.Difficulty.EASY
+                4 -> com.example.project2.data.Difficulty.MEDIUM
+                5 -> com.example.project2.data.Difficulty.HARD
+                else -> com.example.project2.data.Difficulty.EXPERT
+            }
 
-                // <-- 3. USE THE PASSED gridSize TO SLICE THE BITMAP
-                val newPieces = sliceBitmap(scaled, gridSize = gridSize)
-                puzzlePieces = newPieces.shuffled()
-                checkForSolution()
+            val puzzleIdForLeaderboard = "JIGSAW_${difficulty.name}"
+
+            scope.launch {
+                viewModel.submitLeaderboardScore(
+                    puzzleId = puzzleIdForLeaderboard,
+                    score = timeInSeconds.toInt()
+                )
+                android.widget.Toast.makeText(context, "Score saved!", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } else if (!isSolved) {
+            while (true) {
+                delay(1000L)
+                elapsedTime++
             }
         }
     }
 
-    // --- UI LAYOUT ---
+    fun formatTime(seconds: Long): String {
+        val minutes = TimeUnit.SECONDS.toMinutes(seconds)
+        val remainingSeconds = seconds - TimeUnit.MINUTES.toSeconds(minutes)
+        return String.format("%02d:%02d", minutes, remainingSeconds)
+    }
+
+
+    val availableImages = listOf(
+        com.example.project2.R.drawable.jigsaw_image1,
+        com.example.project2.R.drawable.jigsaw_image2,
+        com.example.project2.R.drawable.jigsaw_image3,
+        com.example.project2.R.drawable.jigsaw_image4
+    )
+
+    val imageToUse = remember(puzzle.id) {
+        if (puzzle.id == "play_jigsaw_template") {
+            availableImages.random()
+        } else {
+            puzzle.localImageResId ?: com.example.project2.R.drawable.jigsaw_image1
+        }
+    }
+
+    LaunchedEffect(puzzle.id, boardSize, gridSize) {
+        if (boardSize != IntSize.Zero && puzzlePieces.isEmpty()) {
+
+            val originalBitmap = BitmapFactory.decodeResource(context.resources, imageToUse)
+
+            val scaled = Bitmap.createScaledBitmap(
+                originalBitmap, boardSize.width, boardSize.height, false
+            ).asImageBitmap()
+
+            val newPieces = sliceBitmap(scaled, gridSize = gridSize)
+            puzzlePieces = newPieces.shuffled()
+            checkForSolution()
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -101,8 +154,14 @@ fun JigsawPuzzleScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(text = puzzle.title, style = MaterialTheme.typography.headlineSmall)
+
+            Text(
+                text = "Time: ${formatTime(elapsedTime)}",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
             Text(text = puzzle.description, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-            // Display the difficulty based on the grid size
             Text(text = "${puzzle.type.displayName} • ${gridSize}x$gridSize", style = MaterialTheme.typography.labelLarge)
         }
 
@@ -125,7 +184,7 @@ fun JigsawPuzzleScreen(
                 if (puzzlePieces.isNotEmpty()) {
                     PuzzleBoard(
                         pieces = puzzlePieces,
-                        gridSize = gridSize, // <-- 4. PASS gridSize TO THE PuzzleBoard
+                        gridSize = gridSize,
                         draggedPieceId = draggedPieceId,
                         targetDropIndex = targetDropIndex,
                         isSolved = isSolved,
@@ -140,7 +199,6 @@ fun JigsawPuzzleScreen(
                             val screenPosition = boardTopLeft + position
                             val localFingerPosition = screenPosition - boardTopLeft
 
-                            // <-- 5. MAKE DROP TARGET LOGIC DYNAMIC
                             val pieceSize = boardSize.width / gridSize
                             val col = (localFingerPosition.x / pieceSize).toInt()
                             val row = (localFingerPosition.y / pieceSize).toInt()
@@ -179,7 +237,6 @@ fun JigsawPuzzleScreen(
                 }
             }
 
-            // ... inside the JigsawPuzzleScreen composable
 
             if (isSolved) {
                 Box(
@@ -190,34 +247,25 @@ fun JigsawPuzzleScreen(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp) // Reduced spacing to fit the new button
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text("You Win!", style = MaterialTheme.typography.displayMedium, color = Color.White)
 
-                        // This button restarts the same puzzle
                         Button(onClick = {
                             puzzlePieces = puzzlePieces.shuffled()
                             isSolved = false
                         }) { Text("Play Again") }
 
-                        // ▼▼▼ NEW BUTTON ADDED HERE ▼▼▼
-                        // This button calls onBack, which will navigate to the previous screen (DifficultySelectionScreen)
                         Button(onClick = onBack) { Text("Switch Difficulty") }
 
-                        // This button is for going back to the main puzzle library (now functionally similar to Switch Difficulty, but could be different in other contexts)
                         Button(onClick = {
                             puzzlePieces = emptyList()
                             boardSize = IntSize.Zero
                             isSolved = false
-                            // You might want to navigate further back, but for now, onBack is sufficient.
-                            // To go all the way home, you'd need a more specific callback.
-                            // For this use case, let's also have it just go back.
                             onBack()
                         }) { Text("Switch Puzzle") }
 
-                        // This button remains for navigating all the way back home.
-                        // Note: Depending on your nav graph, this might do the same as the others.
-                        // We'll leave it for completeness.
+
                         Button(onClick = onBack) { Text("Back to Home") }
                     }
                 }
@@ -241,7 +289,7 @@ fun JigsawPuzzleScreen(
 @Composable
 private fun PuzzleBoard(
     pieces: List<PuzzlePiece>,
-    gridSize: Int, // <-- Already accepts this
+    gridSize: Int,
     draggedPieceId: Int?,
     targetDropIndex: Int?,
     isSolved: Boolean,
@@ -268,7 +316,9 @@ private fun PuzzleBoard(
                         .aspectRatio(1f)
                         .padding(1.dp)
                         .background(
-                            if (isDropTarget && !isSolved) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            if (isDropTarget && !isSolved) MaterialTheme.colorScheme.primary.copy(
+                                alpha = 0.3f
+                            )
                             else Color.Transparent
                         )
                 ) {
@@ -291,8 +341,10 @@ private fun PuzzleBoard(
                             onDragStart = { startOffset ->
                                 // <-- 6. MAKE onDragStart DYNAMIC
                                 val pieceSize = size.width / gridSize
-                                val col = (startOffset.x / pieceSize).toInt().coerceIn(0, gridSize - 1)
-                                val row = (startOffset.y / pieceSize).toInt().coerceIn(0, gridSize - 1)
+                                val col =
+                                    (startOffset.x / pieceSize).toInt().coerceIn(0, gridSize - 1)
+                                val row =
+                                    (startOffset.y / pieceSize).toInt().coerceIn(0, gridSize - 1)
                                 val startIndex = (row * gridSize) + col
                                 if (startIndex < pieces.size) {
                                     onDragStart(pieces[startIndex].id)

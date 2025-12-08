@@ -1,13 +1,20 @@
 package com.example.project2.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -39,10 +46,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import com.example.project2.data.AuthRepository
 import com.example.project2.data.Difficulty
 import com.example.project2.data.FirebaseMindMatchRepository
@@ -54,6 +64,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.util.UUID
+import android.net.Uri
+import androidx.compose.ui.res.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +91,13 @@ fun CreatePuzzleScreen(
     var mastermindGuesses by remember { mutableIntStateOf(8) }
     var mastermindLevels by remember { mutableIntStateOf(1) }
     var mastermindCode by remember { mutableStateOf<List<String>>(emptyList()) }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> // The result is a nullable Uri
+            imageUri = uri
+        }
+    )
     val mastermindPalette = remember {
         listOf(
             "Red" to Color(0xFFE53935),
@@ -237,6 +256,142 @@ fun CreatePuzzleScreen(
                     )
                 }
 
+                if (puzzleType.equals("Jigsaw", ignoreCase = true)) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Jigsaw Settings",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            text = "Select a default puzzle",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        // A simple data class to represent our selectable local images
+                        data class LocalImageOption(val name: String, val resId: Int, val difficulty: Difficulty)
+
+                        val localImages = listOf(
+                            LocalImageOption("Jigsaw #1", com.example.project2.R.drawable.jigsaw_image1, Difficulty.EASY),
+                            LocalImageOption("Jigsaw #2", com.example.project2.R.drawable.jigsaw_image2, Difficulty.EASY),
+                            LocalImageOption("Jigsaw #1", com.example.project2.R.drawable.jigsaw_image3, Difficulty.EASY),
+                            LocalImageOption("Jigsaw #1", com.example.project2.R.drawable.jigsaw_image4, Difficulty.EASY)
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 8.dp)
+                        ) {
+                            localImages.forEach { imageOption ->
+                                Card(
+                                    modifier = Modifier
+                                        .width(140.dp)
+                                        .height(140.dp)
+                                        .padding(end = 8.dp)
+                                        .clickable {
+                                            // Instantly create this default puzzle
+                                            scope.launch {
+                                                try {
+                                                    val puzzleId = UUID.randomUUID().toString()
+                                                    val resourceUri =
+                                                        Uri.parse("android.resource://${context.packageName}/${imageOption.resId}")
+                                                    val imageUrl = withContext(Dispatchers.IO) {
+                                                        repository.uploadPuzzleImage(
+                                                            resourceUri,
+                                                            puzzleId
+                                                        )
+                                                    }
+                                                    val descriptor = PuzzleDescriptor(
+                                                        id = puzzleId,
+                                                        title = imageOption.name,
+                                                        description = "A default jigsaw puzzle.",
+                                                        type = PuzzleType.JIGSAW,
+                                                        creatorId = creatorId.ifBlank { "unknown" },
+                                                        difficulty = imageOption.difficulty,
+                                                        isUserCreated = true,
+                                                        imageUrl = imageUrl
+                                                    )
+                                                    withContext(Dispatchers.IO) {
+                                                        repository.savePuzzleToFirebase(
+                                                            descriptor
+                                                        )
+                                                    }
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Puzzle '${imageOption.name}' created!",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        onPuzzleCreated()
+                                                    }
+                                                } catch (e: Exception) {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Failed to create puzzle: ${e.message}",
+                                                            Toast.LENGTH_LONG
+                                                        ).show()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                ) {
+                                    Box(contentAlignment = Alignment.BottomCenter) {
+                                        Image(
+                                            painter = painterResource(id = imageOption.resId),
+                                            contentDescription = imageOption.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Text(
+                                            text = imageOption.name,
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color.Black.copy(alpha = 0.6f))
+                                                .padding(vertical = 4.dp, horizontal = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = "Or create from your device",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                imagePickerLauncher.launch("image/*")
+                            }
+                        ) {
+                            Icon(Icons.Default.CloudUpload, contentDescription = "Upload Image")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Select Jigsaw Image")
+                        }
+
+                        imageUri?.let {
+                            Image(
+                                painter = rememberAsyncImagePainter(model = imageUri),
+                                contentDescription = "Selected Jigsaw Image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+
+                    }
+                }
+
                 Text(
                     text = "Base difficulty",
                     style = MaterialTheme.typography.titleMedium
@@ -278,33 +433,59 @@ fun CreatePuzzleScreen(
                         try {
                             val typeEnum = resolvePuzzleType(puzzleType)
                             val duration = Duration.ofSeconds(estimatedDurationSeconds.toLong())
-                            val mastermindConfig = if (typeEnum == PuzzleType.MASTERMIND && mastermindSelectedColors.isNotEmpty()) {
-                                val adjustedCode = adjustMastermindCode(mastermindSelectedColors, mastermindSlots, mastermindCode).map {
-                                    if (it.isBlank()) mastermindSelectedColors.first() else it
-                                }
-                                MastermindConfig(
-                                    colors = mastermindSelectedColors.toList(),
-                                    slots = mastermindSlots,
-                                    guesses = mastermindGuesses,
-                                    levels = mastermindLevels,
-                                    code = adjustedCode
-                                )
-                            } else null
 
-                            val descriptor = PuzzleDescriptor(
-                                id = UUID.randomUUID().toString(),
-                                title = title.ifBlank { "Untitled Puzzle" },
-                                description = description.ifBlank { "Created in-app" },
-                                type = typeEnum,
-                                creatorId = creatorId.ifBlank { "unknown" },
-                                difficulty = selectedDifficulty,
-                                estimatedDuration = duration,
-                                isUserCreated = true,
-                                mastermindConfig = mastermindConfig
-                            )
-                            withContext(Dispatchers.IO) {
-                                repository.savePuzzleToFirebase(descriptor)
+                            if (typeEnum == PuzzleType.JIGSAW) {
+                                if (imageUri == null) {
+                                    Toast.makeText(context, "Please select an image for the Jigsaw puzzle.", Toast.LENGTH_LONG).show()
+                                    return@launch
+                                }
+
+                                val puzzleId = UUID.randomUUID().toString()
+                                val imageUrl = withContext(Dispatchers.IO) {
+                                    repository.uploadPuzzleImage(imageUri!!, puzzleId)
+                                }
+
+                                val descriptor = PuzzleDescriptor(
+                                    id = puzzleId,
+                                    title = title.ifBlank { "Untitled Jigsaw" },
+                                    description = description.ifBlank { "A user-created jigsaw puzzle." },
+                                    type = typeEnum,
+                                    creatorId = creatorId.ifBlank { "unknown" },
+                                    difficulty = selectedDifficulty,
+                                    estimatedDuration = duration,
+                                    isUserCreated = true,
+                                    imageUrl = imageUrl
+                                )
+                                withContext(Dispatchers.IO) { repository.savePuzzleToFirebase(descriptor) }
+
+                            } else {
+                                val mastermindConfig = if (typeEnum == PuzzleType.MASTERMIND && mastermindSelectedColors.isNotEmpty()) {
+                                    val adjustedCode = adjustMastermindCode(mastermindSelectedColors, mastermindSlots, mastermindCode).map {
+                                        if (it.isBlank()) mastermindSelectedColors.first() else it
+                                    }
+                                    MastermindConfig(
+                                        colors = mastermindSelectedColors.toList(),
+                                        slots = mastermindSlots,
+                                        guesses = mastermindGuesses,
+                                        levels = mastermindLevels,
+                                        code = adjustedCode
+                                    )
+                                } else null
+
+                                val descriptor = PuzzleDescriptor(
+                                    id = UUID.randomUUID().toString(),
+                                    title = title.ifBlank { "Untitled Puzzle" },
+                                    description = description.ifBlank { "Created in-app" },
+                                    type = typeEnum,
+                                    creatorId = creatorId.ifBlank { "unknown" },
+                                    difficulty = selectedDifficulty,
+                                    estimatedDuration = duration,
+                                    isUserCreated = true,
+                                    mastermindConfig = mastermindConfig
+                                )
+                                withContext(Dispatchers.IO) { repository.savePuzzleToFirebase(descriptor) }
                             }
+
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, "Puzzle created!", Toast.LENGTH_SHORT).show()
                             }
@@ -316,6 +497,7 @@ fun CreatePuzzleScreen(
                         }
                     }
                 }
+
             ) {
                 Icon(Icons.Filled.CloudUpload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))

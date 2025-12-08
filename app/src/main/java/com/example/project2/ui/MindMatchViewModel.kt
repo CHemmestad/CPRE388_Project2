@@ -1,5 +1,6 @@
 package com.example.project2.ui
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,6 +13,8 @@ import com.example.project2.data.LeaderboardEntry
 import com.example.project2.data.PlayerProfile
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleProgress
+import com.google.firebase.Firebase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MindMatchViewModel(
@@ -97,6 +100,7 @@ class MindMatchViewModel(
                     playerName = name,
                     score = score
                 )
+                repository.loadLeaderboard()
                 leaderboard = repository.leaderboard
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -116,11 +120,23 @@ class MindMatchViewModel(
             }
         }
     }
+
     fun markPuzzlePlayed(puzzleId: String) {
         val userId = authRepo.getCurrentUserId() ?: return
         viewModelScope.launch {
             repository.recordPuzzlePlayed(userId, puzzleId)
             profile = repository.activeProfile
         }
+    }
+
+    fun saveJigsawScore(timeInSeconds: Long, gridSize: Int) {
+        val name = profile?.displayName ?: "Anonymous"
+
+        val puzzleIdForLeaderboard = "JIGSAW_${gridSize}X${gridSize}"
+
+        submitLeaderboardScore(
+            puzzleId = puzzleIdForLeaderboard,
+            score = timeInSeconds.toInt()
+        )
     }
 }

@@ -17,10 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleProgress
 import com.example.project2.ui.widgets.PuzzleCard
+import com.example.project2.data.PuzzleType
 
 @Composable
 fun PuzzleLibraryScreen(
@@ -49,7 +51,10 @@ fun PuzzleLibraryScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(puzzles) { puzzle ->
+            val puzzlesToShow = puzzles.filter { puzzle ->
+                puzzle.type != PuzzleType.JIGSAW || puzzle.id == "play_jigsaw_template"
+            }
+            items(puzzlesToShow) { puzzle ->
                 PuzzleCard(
                     puzzle = puzzle,
                     progress = progress[puzzle.id],
