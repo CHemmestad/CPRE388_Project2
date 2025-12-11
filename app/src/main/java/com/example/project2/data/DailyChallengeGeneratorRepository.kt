@@ -1,5 +1,6 @@
 package com.example.project2.data
 
+import android.util.Log
 import com.example.project2.BuildConfig
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -10,6 +11,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -37,8 +39,8 @@ class DailyChallengeGeneratorRepository(
         val trimmedPrompt = prompt.trim()
         require(trimmedPrompt.isNotBlank()) { "Prompt must not be blank" }
 
-        val openAiResponse = requestOpenAi(trimmedPrompt)
-        val jsonObject = extractJsonPayload(openAiResponse)
+        val geminiResponse = requestGemini(trimmedPrompt)
+        val jsonObject = extractJsonPayload(geminiResponse)
         val documentId = saveToFirestore(trimmedPrompt, jsonObject)
 
         return DailyChallengeGenerationResult(
@@ -47,85 +49,92 @@ class DailyChallengeGeneratorRepository(
         )
     }
 
-    private suspend fun requestOpenAi(prompt: String): String = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.OPENAI_API_KEY
-        require(apiKey.isNotBlank()) { "Missing OpenAI API key. Add OPENAI_API_KEY to local.properties." }
+    private suspend fun requestGemini(prompt: String): String = withContext(Dispatchers.IO) {
+        val apiKey = BuildConfig.GEMINI_API_KEY
+        require(apiKey.isNotBlank()) { "Missing GEMINI_API_KEY in local.properties." }
 
+        // Combine system instructions and user prompt into a single text block for Gemini.
         val payload = JSONObject().apply {
-            put("model", OPENAI_MODEL)
-            put("temperature", 0.8)
-            put("messages", JSONArray().apply {
-                put(
-                    JSONObject().apply {
-                        put("role", "system")
-                        put("content", SYSTEM_INSTRUCTIONS)
-                    }
-                )
-                put(
-                    JSONObject().apply {
-                        put("role", "user")
-                        put("content", prompt)
-                    }
-                )
-            })
+            put(
+                "contents",
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put(
+                                "parts",
+                                JSONArray().apply {
+                                    put(
+                                        JSONObject().apply {
+                                            put("text", "$SYSTEM_INSTRUCTIONS\n\nUser prompt:\n$prompt")
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    )
+                }
+            )
+            put(
+                "generationConfig",
+                JSONObject().apply {
+                    put("temperature", 0.8)
+                }
+            )
         }
 
         val requestBody = payload.toString().toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
-            .url(OPENAI_URL)
-            .addHeader("Authorization", "Bearer $apiKey")
+            .url("$GEMINI_URL?key=$apiKey")
             .post(requestBody)
             .build()
 
         httpClient.newCall(request).execute().use { response ->
+            val bodyString = response.body?.string()
             if (!response.isSuccessful) {
-                val errorBody = response.body?.string()
-                throw IOException("OpenAI error ${response.code}: ${errorBody ?: "no body"}")
+                Log.e("Gemini", "Gemini error ${response.code}: ${bodyString ?: "no body"}")
+                throw IOException("Gemini error ${response.code}: ${bodyString ?: "no body"}")
             }
-            response.body?.string() ?: throw IOException("Empty OpenAI response body")
+            bodyString ?: throw IOException("Empty Gemini response body")
         }
     }
 
     private fun extractJsonPayload(rawResponse: String): JSONObject {
         val root = JSONObject(rawResponse)
-        val content = root.optJSONArray("choices")
+        val content = root.optJSONArray("candidates")
             ?.optJSONObject(0)
-            ?.optJSONObject("message")
-            ?.optString("content")
+            ?.optJSONObject("content")
+            ?.optJSONArray("parts")
+            ?.optJSONObject(0)
+            ?.optString("text")
             ?.trim()
 
         if (content.isNullOrBlank()) {
-            throw IllegalStateException("OpenAI response did not contain content")
+            throw IllegalStateException("Gemini response did not contain content")
         }
 
         val cleaned = removeCodeFences(content)
         return JSONObject(cleaned)
     }
 
-    private suspend fun saveToFirestore(prompt: String, jsonObject: JSONObject): String =
-        suspendCancellableCoroutine { continuation ->
-            val data = hashMapOf<String, Any?>(
-                "prompt" to prompt,
-                "rawJson" to jsonObject.toString(),
-                "parsedContent" to jsonObject.toMap(),
-                "model" to OPENAI_MODEL,
-                "createdAt" to Timestamp.now(),
-                "createdBy" to auth.currentUser?.uid
-            )
+    private suspend fun saveToFirestore(prompt: String, jsonObject: JSONObject): String {
+        val data = hashMapOf<String, Any?>(
+            "prompt" to prompt,
+            "rawJson" to jsonObject.toString(),
+            "parsedContent" to jsonObject.toMap(),
+            "model" to GEMINI_MODEL,
+            "createdAt" to Timestamp.now(),
+            "createdBy" to auth.currentUser?.uid
+        )
 
-            firestore.collection(DAILY_CHALLENGES_COLLECTION)
-                .add(data)
-                .addOnSuccessListener { document ->
-                    if (continuation.isActive) {
-                        continuation.resume(document.id)
-                    }
-                }
-                .addOnFailureListener { error ->
-                    if (continuation.isActive) {
-                        continuation.resumeWithException(error)
-                    }
-                }
-        }
+        val collection = firestore.collection(DAILY_CHALLENGES_COLLECTION)
+        val existing = collection.get().await()
+        firestore.runBatch { batch ->
+            existing.documents.forEach { batch.delete(it.reference) }
+        }.await()
+
+        collection.document("current").set(data).await()
+        return "current"
+    }
 
     private fun JSONObject.toMap(): Map<String, Any?> {
         val result = mutableMapOf<String, Any?>()
@@ -158,10 +167,12 @@ class DailyChallengeGeneratorRepository(
     }
 
     companion object {
-        private const val OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-        private const val OPENAI_MODEL = "gpt-4o-mini"
+        // Align with working chatbot example (v1beta gemini-2.5-flash)
+        private const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        private const val GEMINI_MODEL = "gemini-2.5-flash"
         private const val DAILY_CHALLENGES_COLLECTION = "dailyChallenges"
-        private const val SYSTEM_INSTRUCTIONS = "You are an elite MindMatch puzzle designer. Return only the JSON object for DailyPuzzleContent (instructions, grid, controls, stats)."
+        private const val SYSTEM_INSTRUCTIONS =
+            "You are an elite MindMatch puzzle designer. Act like a user filling out the Mastermind builder. Return only the JSON object with keys: title, description, mastermindConfig { colors, slots, guesses, levels, code }. Allowed colors (use exactly these words): Red, Blue, Green, Yellow, Orange, Purple, Pink, White. Choose 1-8 colors. Slots: 1-8 and must be >= number of chosen colors. Guesses: 1-20. Levels: at least 1. Code length equals slots and uses only the chosen colors (duplicates allowed). Keep description under 50 words. No commentary."
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

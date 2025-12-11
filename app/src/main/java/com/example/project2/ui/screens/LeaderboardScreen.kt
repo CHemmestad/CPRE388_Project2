@@ -10,7 +10,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -69,7 +71,7 @@ private fun LeaderboardCard(
         entries.sortedBy { it.score }
     } else {
         entries.sortedByDescending { it.score }
-    }
+    }.take(5)
 
     Card {
         Column(
@@ -84,80 +86,61 @@ private fun LeaderboardCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // Column headers
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Rank",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Player",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1.5f)
-                )
-                Text(
-                    text = "Puzzle",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(2f)
-                )
-                Text(
-                    text = "Score",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Divider()
-
             // Rows: rank, player, puzzle type+name, score
             sortedEntries.forEachIndexed { index, entry ->
-                Row(
+                val colors: Pair<Color, Color> = when (index) {
+                    0 -> Pair(Color(0xFFD6B536), MaterialTheme.colorScheme.onPrimary)
+                    1 -> Pair(Color(0xFFD6D6D6), MaterialTheme.colorScheme.onSurface)
+                    2 -> Pair(Color(0xFFB66A2B), MaterialTheme.colorScheme.onPrimary)
+                    else -> Pair(Color.Transparent, MaterialTheme.colorScheme.onSurface)
+                }
+                val rowColor = colors.first
+                val textColor = colors.second
+
+                Surface(
+                    color = rowColor,
+                    contentColor = textColor,
+                    tonalElevation = if (index < 3) 2.dp else 0.dp,
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 2.dp)
                 ) {
-                    // Rank
-                    Text(
-                        text = "#${index + 1}",
-                        fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp, horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Rank
+                        Text(
+                            text = "#${index + 1}",
+                            fontWeight = if (index < 3) FontWeight.Bold else FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
 
-                    // Player
-                    Text(
-                        text = entry.playerName,
-                        modifier = Modifier.weight(1.5f),
-                        fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                        // Player
+                        Text(
+                            text = entry.playerName,
+                            modifier = Modifier.weight(1.5f),
+                            fontWeight = if (index < 3) FontWeight.SemiBold else FontWeight.Normal
+                        )
 
-                    // Puzzle type + name
-                    Text(
-                        text = "${puzzle.type.displayName} – ${puzzle.title}",
-                        modifier = Modifier.weight(2f),
-                        fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                        val scoreText = if (puzzle.type == PuzzleType.JIGSAW) {
+                            val minutes = entry.score / 60
+                            val seconds = entry.score % 60
+                            String.format("%02d:%02d", minutes, seconds)
+                        } else {
+                            entry.score.toString()
+                        }
 
-                    val scoreText = if (puzzle.type == PuzzleType.JIGSAW) {
-                        val minutes = entry.score / 60
-                        val seconds = entry.score % 60
-                        String.format("%02d:%02d", minutes, seconds)
-                    } else {
-                        entry.score.toString()
+                        // Score
+                        Text(
+                            text = scoreText,
+                            fontWeight = if (index < 3) FontWeight.SemiBold else FontWeight.Normal
+                        )
                     }
-
-                    // Score
-                    Text(
-                        text = scoreText,
-                        fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
-                    )
                 }
             }
         }

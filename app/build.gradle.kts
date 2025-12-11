@@ -32,6 +32,12 @@ android {
             ?: System.getenv("OPENAI_API_KEY")
             ?: ""
         buildConfigField("String", "OPENAI_API_KEY", "\"$openAiKey\"")
+
+        val geminiKey = localProps.getProperty("GEMINI_API_KEY")
+            ?: project.findProperty("GEMINI_API_KEY") as? String
+            ?: System.getenv("GEMINI_API_KEY")
+            ?: ""
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
     }
 
     buildTypes {

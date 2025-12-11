@@ -31,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.example.project2.data.PlayerProfile
 import com.example.project2.data.PuzzleDescriptor
 
@@ -39,10 +41,23 @@ fun ProfileScreen(
     profile: PlayerProfile?,
     userPuzzles: List<PuzzleDescriptor> = emptyList(),
     modifier: Modifier = Modifier,
+    onDeletePuzzle: (PuzzleDescriptor) -> Unit = {},
+    onSaveProfile: (String, String) -> Unit = { _, _ -> },
+    onDeleteAccount: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    var displayName by remember(profile!!.id) { mutableStateOf(profile!!.displayName) }
-    var bio by remember(profile.id) { mutableStateOf(profile!!.bio) }
+    val context = LocalContext.current
+    if (profile == null) {
+        Text(
+            text = "Loading profile...",
+            modifier = modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        return
+    }
+
+    var displayName by remember(profile.id) { mutableStateOf(profile.displayName) }
+    var bio by remember(profile.id) { mutableStateOf(profile.bio) }
 
     Column(
         modifier = modifier
@@ -126,7 +141,10 @@ fun ProfileScreen(
                     ) {
                         Button(
                             modifier = Modifier.weight(1f),
-                            onClick = { /* TODO: Save to persistence */ }
+                            onClick = {
+                                onSaveProfile(displayName.trim(), bio.trim())
+                                Toast.makeText(context, "Profile updated", Toast.LENGTH_SHORT).show()
+                            }
                         ) {
                             Icon(Icons.Filled.Restore, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -134,7 +152,10 @@ fun ProfileScreen(
                         }
                         Button(
                             modifier = Modifier.weight(1f),
-                            onClick = { /* TODO: Delete profile */ }
+                            onClick = {
+                                onDeleteAccount()
+                                Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show()
+                            }
                         ) {
                             Icon(Icons.Filled.Delete, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -171,6 +192,19 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Button(onClick = {
+                                onDeletePuzzle(puzzle)
+                                Toast.makeText(context, "Puzzle deleted", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete puzzle")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Delete")
+                            }
+                        }
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.example.project2.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,11 +26,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +40,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.MastermindConfig
 import com.example.project2.data.PuzzleDescriptor
+import com.example.project2.data.PuzzleProgress
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import kotlin.math.max
 
 data class MastermindFeedback(val exact: Int, val colorOnly: Int)
 data class MastermindGuess(val values: List<String>, val feedback: MastermindFeedback)
@@ -47,6 +53,8 @@ data class MastermindGuess(val values: List<String>, val feedback: MastermindFee
 fun MastermindScreen(
     puzzle: PuzzleDescriptor,
     config: MastermindConfig,
+    progress: PuzzleProgress?,
+    onProgressUpdated: (PuzzleProgress) -> Unit = {},
     onBack: () -> Unit
 ) {
     val colors = remember(config.colors) { config.colors }
@@ -54,17 +62,12 @@ fun MastermindScreen(
     val slots = config.slots.coerceIn(1, 8)
     val maxGuesses = config.guesses.coerceAtLeast(1)
 
-    var currentGuess by remember { mutableStateOf(List(slots) { "" }) }
-    val history = remember { mutableStateListOf<MastermindGuess>() }
-    var statusMessage by remember { mutableStateOf("Tap colors to fill slots, then Submit.") }
-    var gameOver by remember { mutableStateOf(false) }
+    val restored = remember(progress?.inProgressState, config) { progress?.inProgressState?.let(::decodeState) }
 
-    LaunchedEffect(config) {
-        currentGuess = List(slots) { "" }
-        history.clear()
-        statusMessage = "Tap colors to fill slots, then Submit."
-        gameOver = false
-    }
+    var currentGuess by remember(progress?.inProgressState, config) { mutableStateOf(restored?.currentGuess ?: List(slots) { "" }) }
+    val history = remember(progress?.inProgressState, config) { mutableStateListOf<MastermindGuess>().apply { restored?.history?.let { addAll(it) } } }
+    var statusMessage by remember(progress?.inProgressState, config) { mutableStateOf(restored?.statusMessage ?: "Tap colors to fill slots, then Submit.") }
+    var gameOver by remember(progress?.inProgressState, config) { mutableStateOf(restored?.gameOver ?: false) }
 
     val remaining = maxGuesses - history.size
     val won = history.any { it.feedback.exact == slots }
@@ -168,12 +171,48 @@ fun MastermindScreen(
                     if (feedback.exact == slots) {
                         statusMessage = "You cracked the code!"
                         gameOver = true
+                        onProgressUpdated(
+                            buildProgress(
+                                puzzle = puzzle,
+                                config = config,
+                                previous = progress,
+                                history = history,
+                                currentGuess = currentGuess,
+                                gameOver = true,
+                                statusMessage = statusMessage,
+                                won = true
+                            )
+                        )
                     } else if (history.size >= maxGuesses) {
                         statusMessage = "Out of guesses. Code was ${secret.joinToString()}."
                         gameOver = true
+                        onProgressUpdated(
+                            buildProgress(
+                                puzzle = puzzle,
+                                config = config,
+                                previous = progress,
+                                history = history,
+                                currentGuess = currentGuess,
+                                gameOver = true,
+                                statusMessage = statusMessage,
+                                won = false
+                            )
+                        )
                     } else {
                         statusMessage = "Exact: ${feedback.exact}, Color only: ${feedback.colorOnly}"
                         currentGuess = List(slots) { "" }
+                        onProgressUpdated(
+                            buildProgress(
+                                puzzle = puzzle,
+                                config = config,
+                                previous = progress,
+                                history = history,
+                                currentGuess = currentGuess,
+                                gameOver = gameOver,
+                                statusMessage = statusMessage,
+                                won = false
+                            )
+                        )
                     }
                 }
             ) {
@@ -186,6 +225,38 @@ fun MastermindScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Back")
+        }
+    }
+
+    BackHandler {
+        onProgressUpdated(
+            buildProgress(
+                puzzle = puzzle,
+                config = config,
+                previous = progress,
+                history = history,
+                currentGuess = currentGuess,
+                gameOver = gameOver,
+                statusMessage = statusMessage,
+                won = won
+            )
+        )
+        onBack()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            onProgressUpdated(
+                buildProgress(
+                    puzzle = puzzle,
+                    config = config,
+                    previous = progress,
+                    history = history,
+                    currentGuess = currentGuess,
+                    gameOver = gameOver,
+                    statusMessage = statusMessage,
+                    won = won
+                )
+            )
         }
     }
 }
@@ -251,6 +322,85 @@ private fun FeedbackDots(feedback: MastermindFeedback) {
         }
     }
 }
+
+private fun buildProgress(
+    puzzle: PuzzleDescriptor,
+    config: MastermindConfig,
+    previous: PuzzleProgress?,
+    history: List<MastermindGuess>,
+    currentGuess: List<String>,
+    gameOver: Boolean,
+    statusMessage: String,
+    won: Boolean
+): PuzzleProgress {
+    val guessesMade = history.size
+    val winScore = if (won) config.guesses - guessesMade + 1 else 0
+    val bestScore = max(previous?.bestScore ?: 0, winScore)
+    val stateJson = encodeState(history, currentGuess, gameOver, statusMessage)
+    return PuzzleProgress(
+        puzzleId = puzzle.id,
+        currentLevel = guessesMade,
+        levelsUnlocked = guessesMade,
+        bestScore = bestScore,
+        bestTime = previous?.bestTime,
+        inProgressState = stateJson
+    )
+}
+
+private data class MastermindSavedState(
+    val history: List<MastermindGuess>,
+    val currentGuess: List<String>,
+    val gameOver: Boolean,
+    val statusMessage: String
+)
+
+private fun encodeState(
+    history: List<MastermindGuess>,
+    currentGuess: List<String>,
+    gameOver: Boolean,
+    statusMessage: String
+): String {
+    val root = JSONObject()
+    val historyArray = JSONArray()
+    history.forEach { guess ->
+        val obj = JSONObject()
+        obj.put("values", JSONArray(guess.values))
+        obj.put(
+            "feedback",
+            JSONObject().apply {
+                put("exact", guess.feedback.exact)
+                put("colorOnly", guess.feedback.colorOnly)
+            }
+        )
+        historyArray.put(obj)
+    }
+    root.put("history", historyArray)
+    root.put("currentGuess", JSONArray(currentGuess))
+    root.put("gameOver", gameOver)
+    root.put("statusMessage", statusMessage)
+    return root.toString()
+}
+
+private fun decodeState(raw: String): MastermindSavedState? = runCatching {
+    val root = JSONObject(raw)
+    val historyArray = root.optJSONArray("history") ?: JSONArray()
+    val history = buildList {
+        for (i in 0 until historyArray.length()) {
+            val obj = historyArray.optJSONObject(i) ?: continue
+            val valuesArr = obj.optJSONArray("values") ?: JSONArray()
+            val values = List(valuesArr.length()) { idx -> valuesArr.optString(idx) }
+            val feedbackObj = obj.optJSONObject("feedback") ?: JSONObject()
+            val exact = feedbackObj.optInt("exact", 0)
+            val colorOnly = feedbackObj.optInt("colorOnly", 0)
+            add(MastermindGuess(values, MastermindFeedback(exact, colorOnly)))
+        }
+    }
+    val currentGuessArr = root.optJSONArray("currentGuess") ?: JSONArray()
+    val currentGuess = List(currentGuessArr.length()) { idx -> currentGuessArr.optString(idx) }
+    val gameOver = root.optBoolean("gameOver", false)
+    val status = root.optString("statusMessage", "Tap colors to fill slots, then Submit.")
+    MastermindSavedState(history, currentGuess, gameOver, status)
+}.getOrNull()
 
 @Composable
 private fun ColorPickerRow(

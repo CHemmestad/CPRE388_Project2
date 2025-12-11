@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -43,7 +46,8 @@ fun DashboardScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (profile != null) {
@@ -61,7 +65,9 @@ fun DashboardScreen(
             style = MaterialTheme.typography.titleMedium
         )
         val playedByUser: Map<String, Timestamp> = profile?.puzzlesPlayed ?: emptyMap()
-        val playablePuzzles = puzzles.filter { playedByUser.containsKey(it.id) }
+        val playablePuzzles = puzzles
+            .filter { playedByUser.containsKey(it.id) }
+            .sortedByDescending { playedByUser[it.id]?.seconds ?: 0 }
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -75,7 +81,8 @@ fun DashboardScreen(
                     lastPlayed = lastPlayed,
                     actionIcon = Icons.Default.PlayArrow,
                     actionText = "Resume",
-                    onActionClick = { onPlayPuzzle(puzzle) }
+                    onActionClick = { onPlayPuzzle(puzzle) },
+                    modifier = Modifier.widthIn(max = 320.dp)
                 )
             }
         }

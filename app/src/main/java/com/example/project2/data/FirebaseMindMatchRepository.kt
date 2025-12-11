@@ -1,5 +1,6 @@
 package com.example.project2.data
 
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -7,6 +8,8 @@ import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import com.google.firebase.Timestamp
+import org.json.JSONObject
+import java.time.Instant
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.auth.ktx.auth
 
@@ -103,6 +106,18 @@ class FirebaseMindMatchRepository : MindMatchRepository {
             .await()
     }
 
+    suspend fun deletePuzzleFromFirebase(puzzleId: String) {
+        db.collection("puzzles")
+            .document(puzzleId)
+            .delete()
+            .await()
+
+        // Update cache so UI reflects removal immediately
+        cachedPuzzles = cachedPuzzles.filterNot { it.id == puzzleId }
+        cachedProgress = cachedProgress - puzzleId
+        cachedLeaderboard = cachedLeaderboard - puzzleId
+    }
+
     suspend fun uploadPuzzleImage(imageUri: android.net.Uri, puzzleId: String): String {
         val storageRef = Firebase.storage.reference
         val imageRef = storageRef.child("puzzle_images/${puzzleId}.jpg")
@@ -136,6 +151,72 @@ class FirebaseMindMatchRepository : MindMatchRepository {
 
         // also load progress for this user
         loadProgressForUser(userId)
+    }
+
+    /**
+     * Loads the most recent daily challenge generated and maps it to a Mastermind puzzle descriptor.
+     * Returns null if none exist or the payload is malformed.
+     */
+    suspend fun loadLatestDailyChallenge(): DailyChallenge? {
+        val snapshot = db.collection(DAILY_CHALLENGES_COLLECTION)
+            .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+
+        val doc = snapshot.documents.firstOrNull() ?: return null
+        val rawJson = doc.getString("rawJson") ?: return null
+        val createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
+        val puzzleId = "${doc.id}_${createdAt.seconds}"
+
+        val parsed = runCatching { JSONObject(rawJson) }.getOrNull() ?: return null
+        val title = parsed.optString("title", "Daily Mastermind")
+        val description = parsed.optString("description", "AI-generated Mastermind challenge")
+        val configObj = parsed.optJSONObject("mastermindConfig") ?: return null
+        val colors = configObj.optJSONArray("colors")?.let { arr ->
+            List(arr.length()) { index -> arr.optString(index) }.filter { it.isNotBlank() }
+        } ?: emptyList()
+        val slots = configObj.optInt("slots", 4)
+        val guesses = configObj.optInt("guesses", 8)
+        val levels = configObj.optInt("levels", 1)
+        val code = configObj.optJSONArray("code")?.let { arr ->
+            List(arr.length()) { index -> arr.optString(index) }
+        } ?: emptyList()
+
+        if (colors.isEmpty() || code.isEmpty()) return null
+
+        val mastermindConfig = MastermindConfig(
+            colors = colors,
+            slots = slots,
+            guesses = guesses,
+            levels = levels,
+            code = code
+        )
+
+        val puzzle = PuzzleDescriptor(
+            id = puzzleId,
+            title = title,
+            description = description,
+            type = PuzzleType.MASTERMIND,
+            creatorId = doc.getString("createdBy") ?: "daily-gemini",
+            difficulty = Difficulty.MEDIUM,
+            isUserCreated = true,
+            mastermindConfig = mastermindConfig
+        )
+
+        // Stub DailyPuzzleContent to satisfy type; the actual play will use the Mastermind puzzle flow.
+        val placeholderContent = DailyPuzzleContent(
+            instructions = "Play today's Mastermind puzzle.",
+            grid = emptyList(),
+            controls = emptyList(),
+            stats = PuzzleStats(target = 0, streak = 0, timeRemainingSeconds = 0)
+        )
+
+        return DailyChallenge(
+            puzzle = puzzle,
+            expiresAt = createdAt.toDate().toInstant().plusSeconds(86_400),
+            content = placeholderContent
+        )
     }
 
     /**
@@ -221,6 +302,9 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         }
     }
 
+    companion object {
+        private const val DAILY_CHALLENGES_COLLECTION = "dailyChallenges"
+    }
     // ------- LEADERBOARD -------
 
     suspend fun loadLeaderboard() {
@@ -264,7 +348,6 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         loadLeaderboard()
     }
 
-
     suspend fun saveJigsawScore(timeInSeconds: Long, gridSize: Int) {
         val auth = com.google.firebase.ktx.Firebase.auth
         val currentUser = auth.currentUser ?: return
@@ -291,5 +374,4 @@ class FirebaseMindMatchRepository : MindMatchRepository {
 
         loadLeaderboard()
     }
-
 }

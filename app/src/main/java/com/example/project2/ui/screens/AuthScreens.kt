@@ -289,43 +289,11 @@ fun DailyChallengeGeneratorScreen(
     onGenerateDailyChallenge: (String) -> Unit = {},
     onBackToLogin: () -> Unit = {}
 ) {
-    var challengeTitle by rememberSaveable { mutableStateOf("Prism Pulse Relay") }
-    var difficulty by rememberSaveable { mutableStateOf("Expert speed-matching with escalating twists") }
-    var theme by rememberSaveable { mutableStateOf("Neo-futuristic observatory that bends light") }
-    var playerGoal by rememberSaveable { mutableStateOf("Chain together 5 flawless pattern recalls while the board mutates") }
-    var constraints by rememberSaveable { mutableStateOf("Board must reconfigure after every success, no repeated grids, include wildcard tiles") }
-    var scoringFocus by rememberSaveable { mutableStateOf("Combo length, accuracy streak, bonus for adaptive strategy") }
-    var tone by rememberSaveable { mutableStateOf("Energetic, encouraging, concise") }
-    var outputFormat by rememberSaveable { mutableStateOf("Return valid JSON for DailyPuzzleContent.grid/controls/stats fields only") }
     var isGenerating by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
 
-    val prompt by remember(
-        challengeTitle,
-        difficulty,
-        theme,
-        playerGoal,
-        constraints,
-        scoringFocus,
-        tone,
-        outputFormat
-    ) {
-        derivedStateOf {
-            buildDailyChallengePrompt(
-                DailyChallengePromptParameters(
-                    title = challengeTitle,
-                    difficulty = difficulty,
-                    theme = theme,
-                    playerGoal = playerGoal,
-                    constraints = constraints,
-                    scoringFocus = scoringFocus,
-                    tone = tone,
-                    outputFormat = outputFormat
-                )
-            )
-        }
-    }
+    val prompt by remember { mutableStateOf(buildMastermindPrompt()) }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -341,70 +309,13 @@ fun DailyChallengeGeneratorScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "AI Daily Challenge Generator",
+            text = "AI Mastermind Puzzle Generator",
             style = MaterialTheme.typography.headlineSmall
         )
         Text(
-            text = "Describe the challenge you want the AI to build. These fields become a structured prompt you can send to OpenAI.",
+            text = "Gemini will fill in the Mastermind puzzle builder as if it were a user: choosing colors, slots, guesses, levels, and the secret code under the constraints below.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        OutlinedTextField(
-            value = challengeTitle,
-            onValueChange = { challengeTitle = it },
-            label = { Text("Challenge title / hook") },
-            placeholder = { Text("e.g., Prism Pulse Relay") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = difficulty,
-            onValueChange = { difficulty = it },
-            label = { Text("Difficulty + progression notes") },
-            placeholder = { Text("Expert speed-matching with escalating twists") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = theme,
-            onValueChange = { theme = it },
-            label = { Text("Setting or theme") },
-            placeholder = { Text("Neo-futuristic observatory that bends light") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = playerGoal,
-            onValueChange = { playerGoal = it },
-            label = { Text("Player objective") },
-            placeholder = { Text("Chain together 5 flawless pattern recalls while the board mutates") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = constraints,
-            onValueChange = { constraints = it },
-            label = { Text("Constraints / mechanics to enforce") },
-            placeholder = { Text("Board must reconfigure after every success, no repeated grids, include wildcard tiles") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = scoringFocus,
-            onValueChange = { scoringFocus = it },
-            label = { Text("Scoring + stats focus") },
-            placeholder = { Text("Combo length, accuracy streak, bonus for adaptive strategy") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = tone,
-            onValueChange = { tone = it },
-            label = { Text("Instruction tone") },
-            placeholder = { Text("Energetic, encouraging, concise") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = outputFormat,
-            onValueChange = { outputFormat = it },
-            label = { Text("Output format requirements") },
-            placeholder = { Text("Return valid JSON for DailyPuzzleContent fields only") },
-            modifier = Modifier.fillMaxWidth()
         )
 
         Text(
@@ -414,8 +325,8 @@ fun DailyChallengeGeneratorScreen(
         OutlinedTextField(
             value = prompt,
             onValueChange = {},
-            label = { Text("Prompt to send to OpenAI") },
-            supportingText = { Text("Copy this prompt or tap Generate to send it through your integration.") },
+            label = { Text("Prompt to send to Gemini") },
+            supportingText = { Text("Gemini fills out the Mastermind builder using these constraints.") },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp),
@@ -453,9 +364,9 @@ fun DailyChallengeGeneratorScreen(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Sending to OpenAI…")
+                Text("Sending to Gemini…")
             } else {
-                Text("Generate with OpenAI")
+                Text("Generate daily challenge with Gemini")
             }
         }
 
@@ -476,38 +387,17 @@ fun DailyChallengeGeneratorScreen(
     }
 }
 
-private data class DailyChallengePromptParameters(
-    val title: String,
-    val difficulty: String,
-    val theme: String,
-    val playerGoal: String,
-    val constraints: String,
-    val scoringFocus: String,
-    val tone: String,
-    val outputFormat: String
-)
-
-private fun buildDailyChallengePrompt(params: DailyChallengePromptParameters): String {
+private fun buildMastermindPrompt(): String {
     return buildString {
-        appendLine("You are an elite puzzle designer for the MindMatch mobile app. Craft a brand-new, never-before-seen daily challenge.")
-        appendLine("Title: ${params.title.orDefault("Untitled Challenge")}")
-        appendLine("Difficulty & progression: ${params.difficulty.orDefault("Balanced difficulty with escalating steps")}")
-        appendLine("Theme / setting: ${params.theme.orDefault("Abstract neural interface")}")
-        appendLine("Player objective: ${params.playerGoal.orDefault("Deliver a memorable logic puzzle experience")}")
-        appendLine("Constraints & mechanics: ${params.constraints.orDefault("Ensure unique mechanics and zero reused templates")}")
-        appendLine("Scoring + stats focus: ${params.scoringFocus.orDefault("Track streaks, accuracy, and time remaining")}")
-        appendLine("Instruction tone: ${params.tone.orDefault("Friendly and concise")}")
-        appendLine("Output format requirements: ${params.outputFormat.orDefault("Respond with JSON for DailyPuzzleContent (instructions, grid, controls, stats)")}")
+        appendLine("You are an elite puzzle designer for the MindMatch mobile app. Act like a user filling out the Mastermind puzzle builder and generate all required fields yourself.")
+        appendLine("Return JSON with keys: title, description, mastermindConfig { colors, slots, guesses, levels, code }.")
         appendLine()
         appendLine("Rules:")
-        appendLine("1. Puzzle must be solvable without prior template knowledge.")
-        appendLine("2. Grid entries should be concise strings; avoid emojis.")
-        appendLine("3. Controls should describe how players interact (label + isPrimary flag).")
-        appendLine("4. Stats need numeric target/streak/timeRemainingSeconds values.")
-        appendLine("5. Keep instructions under 120 words and match the requested tone.")
-        appendLine()
-        appendLine("Return a single JSON object only. Do not include commentary.")
+        appendLine("1) Allowed palette only: Red, Blue, Green, Yellow, Orange, Purple, Pink, White. Use these exact words (case-insensitive).")
+        appendLine("2) Choose 1-8 colors. Slots: 1-8 and must be >= number of chosen colors. Guesses: 1-20. Levels: at least 1.")
+        appendLine("3) code length must equal slots and use only the chosen colors; duplicates allowed.")
+        appendLine("4) Keep description under 50 words and encouraging.")
+        appendLine("5) Ensure mastermindConfig has all fields: colors[], slots (int), guesses (int), levels (int), code[].")
+        appendLine("Return a single JSON object only. No commentary.")
     }
 }
-
-private fun String.orDefault(default: String): String = if (this.isBlank()) default else this
