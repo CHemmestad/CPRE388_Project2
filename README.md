@@ -83,6 +83,15 @@ app/
 
 Gradle configuration lives in `app/build.gradle.kts`, with shared dependencies declared via the version catalog (`gradle/libs.versions.toml`).
 
+## API Documentation
+
+- Generated Dokka HTML lives under `app/build/dokka/html/index.html`. Open that file directly in a browser after running:
+  ```bash
+  ./gradlew :app:dokkaHtml
+  ```
+- Published docs (via GitHub Pages) are available at: https://chemmestad.github.io/CPRE388_Project2/index.html
+  - If the URL 404s, run the Dokka task and copy `app/build/dokka/html` to a `docs/` folder on the default branch, then enable Pages to serve `/docs`.
+
 ## Contributing
 
 1. Create a feature branch: `git checkout -b feature/my-enhancement`.
