@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.project2.data.LeaderboardEntry
 import com.example.project2.data.PuzzleDescriptor
+import com.example.project2.data.PuzzleType
 
 @Composable
 fun LeaderboardScreen(
@@ -64,6 +65,12 @@ private fun LeaderboardCard(
     puzzle: PuzzleDescriptor,
     entries: List<LeaderboardEntry>
 ) {
+    val sortedEntries = if (puzzle.type == PuzzleType.JIGSAW) {
+        entries.sortedBy { it.score }
+    } else {
+        entries.sortedByDescending { it.score }
+    }
+
     Card {
         Column(
             modifier = Modifier
@@ -111,7 +118,7 @@ private fun LeaderboardCard(
             Divider()
 
             // Rows: rank, player, puzzle type+name, score
-            entries.forEachIndexed { index, entry ->
+            sortedEntries.forEachIndexed { index, entry ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,9 +145,17 @@ private fun LeaderboardCard(
                         fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
                     )
 
+                    val scoreText = if (puzzle.type == PuzzleType.JIGSAW) {
+                        val minutes = entry.score / 60
+                        val seconds = entry.score % 60
+                        String.format("%02d:%02d", minutes, seconds)
+                    } else {
+                        entry.score.toString()
+                    }
+
                     // Score
                     Text(
-                        text = entry.score.toString(),
+                        text = scoreText,
                         fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }

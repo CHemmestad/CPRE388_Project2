@@ -10,6 +10,8 @@ import kotlin.coroutines.resumeWithException
 import com.google.firebase.Timestamp
 import org.json.JSONObject
 import java.time.Instant
+import com.google.firebase.storage.ktx.storage
+import com.google.firebase.auth.ktx.auth
 
 class FirebaseMindMatchRepository : MindMatchRepository {
 
@@ -23,6 +25,50 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     private var cachedPuzzles: List<PuzzleDescriptor> = emptyList()
     private var cachedProgress: Map<String, PuzzleProgress> = emptyMap()
     private var cachedLeaderboard: Map<String, List<LeaderboardEntry>> = emptyMap()
+
+
+    private val defaultPuzzles = listOf(
+        PuzzleDescriptor(
+            id = "play_jigsaw_template",
+            title = "Jigsaw Puzzle",
+            description = "A classic jigsaw puzzle. Choose your difficulty and solve it as fast as you can!",
+            type = PuzzleType.JIGSAW,
+            creatorId = "mindmatch_official",
+            difficulty = Difficulty.MEDIUM
+        ),
+        PuzzleDescriptor(
+            id = "JIGSAW_EASY",
+            title = "Jigsaw (Easy)",
+            type = PuzzleType.JIGSAW,
+            difficulty = Difficulty.EASY,
+            creatorId = "mindmatch_official",
+            description = "Leaderboard for 3x3 puzzles."
+        ),
+        PuzzleDescriptor(
+            id = "JIGSAW_MEDIUM",
+            title = "Jigsaw (Medium)",
+            type = PuzzleType.JIGSAW,
+            difficulty = Difficulty.MEDIUM,
+            creatorId = "mindmatch_official",
+            description = "Leaderboard for 4x4 puzzles."
+        ),
+        PuzzleDescriptor(
+            id = "JIGSAW_HARD",
+            title = "Jigsaw (Hard)",
+            type = PuzzleType.JIGSAW,
+            difficulty = Difficulty.HARD,
+            creatorId = "mindmatch_official",
+            description = "Leaderboard for 5x5 puzzles."
+        ),
+        PuzzleDescriptor(
+            id = "JIGSAW_EXPERT",
+            title = "Jigsaw (Expert)",
+            type = PuzzleType.JIGSAW,
+            difficulty = Difficulty.EXPERT,
+            creatorId = "mindmatch_official",
+            description = "Leaderboard for 6x6 puzzles."
+        )
+    )
 
     override val puzzles: List<PuzzleDescriptor>
         get() = cachedPuzzles
@@ -43,9 +89,12 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     suspend fun loadPuzzlesFromFirebase() {
         val snapshot = db.collection("puzzles").get().await()
 
-        cachedPuzzles = snapshot
+        val firebasePuzzles = snapshot
             .toObjects(FirebasePuzzle::class.java)
             .map { it.toPuzzle() }
+
+        // Combine the default puzzles with the ones from Firebase
+        cachedPuzzles = defaultPuzzles + firebasePuzzles
     }
 
     suspend fun savePuzzleToFirebase(puzzle: PuzzleDescriptor) {
@@ -57,6 +106,7 @@ class FirebaseMindMatchRepository : MindMatchRepository {
             .await()
     }
 
+<<<<<<< HEAD
     suspend fun deletePuzzleFromFirebase(puzzleId: String) {
         db.collection("puzzles")
             .document(puzzleId)
@@ -67,6 +117,15 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         cachedPuzzles = cachedPuzzles.filterNot { it.id == puzzleId }
         cachedProgress = cachedProgress - puzzleId
         cachedLeaderboard = cachedLeaderboard - puzzleId
+=======
+    suspend fun uploadPuzzleImage(imageUri: android.net.Uri, puzzleId: String): String {
+        val storageRef = Firebase.storage.reference
+        val imageRef = storageRef.child("puzzle_images/${puzzleId}.jpg")
+        // Upload the file and wait for the result
+        imageRef.putFile(imageUri).await()
+        // Get the download URL and wait for it
+        return imageRef.downloadUrl.await().toString()
+>>>>>>> main
     }
 
     // --------- Profile + progress ---------
@@ -289,4 +348,36 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         // refresh cache \
         loadLeaderboard()
     }
+<<<<<<< HEAD
+=======
+
+
+    suspend fun saveJigsawScore(timeInSeconds: Long, gridSize: Int) {
+        val auth = com.google.firebase.ktx.Firebase.auth
+        val currentUser = auth.currentUser ?: return
+
+        val difficulty = when (gridSize) {
+            3 -> Difficulty.EASY
+            4 -> Difficulty.MEDIUM
+            5 -> Difficulty.HARD
+            else -> Difficulty.EXPERT
+        }
+
+        val puzzleIdForLeaderboard = "JIGSAW_${difficulty.name}"
+
+        val entry = LeaderboardEntry(
+            puzzleId = puzzleIdForLeaderboard,
+            playerName = currentUser.displayName ?: "Anonymous",
+            score = timeInSeconds.toInt(),
+            recordedAt = java.time.Instant.now()
+        )
+
+        db.collection("leaderboard")
+            .add(entry.toFirebase())
+            .await()
+
+        loadLeaderboard()
+    }
+
+>>>>>>> main
 }
