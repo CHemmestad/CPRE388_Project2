@@ -106,7 +106,6 @@ class FirebaseMindMatchRepository : MindMatchRepository {
             .await()
     }
 
-<<<<<<< HEAD
     suspend fun deletePuzzleFromFirebase(puzzleId: String) {
         db.collection("puzzles")
             .document(puzzleId)
@@ -117,7 +116,8 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         cachedPuzzles = cachedPuzzles.filterNot { it.id == puzzleId }
         cachedProgress = cachedProgress - puzzleId
         cachedLeaderboard = cachedLeaderboard - puzzleId
-=======
+    }
+
     suspend fun uploadPuzzleImage(imageUri: android.net.Uri, puzzleId: String): String {
         val storageRef = Firebase.storage.reference
         val imageRef = storageRef.child("puzzle_images/${puzzleId}.jpg")
@@ -125,7 +125,6 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         imageRef.putFile(imageUri).await()
         // Get the download URL and wait for it
         return imageRef.downloadUrl.await().toString()
->>>>>>> main
     }
 
     // --------- Profile + progress ---------
@@ -348,9 +347,6 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         // refresh cache \
         loadLeaderboard()
     }
-<<<<<<< HEAD
-=======
-
 
     suspend fun saveJigsawScore(timeInSeconds: Long, gridSize: Int) {
         val auth = com.google.firebase.ktx.Firebase.auth
@@ -378,6 +374,4 @@ class FirebaseMindMatchRepository : MindMatchRepository {
 
         loadLeaderboard()
     }
-
->>>>>>> main
 }
