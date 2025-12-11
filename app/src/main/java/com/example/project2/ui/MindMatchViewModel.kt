@@ -90,6 +90,8 @@ class MindMatchViewModel(
         viewModelScope.launch {
             repository.saveProgress(userId, progress)
             progressByPuzzle = repository.progressByPuzzle
+            repository.recordPuzzlePlayed(userId, progress.puzzleId)
+            profile = repository.activeProfile
         }
     }
 
@@ -150,6 +152,36 @@ class MindMatchViewModel(
                 mergeDailyChallenge(repository.loadLatestDailyChallenge())
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun updateProfile(displayName: String, bio: String) {
+        val userId = authRepo.getCurrentUserId() ?: return
+        viewModelScope.launch {
+            try {
+                val updated = authRepo.updateProfile(userId, displayName, bio)
+                if (updated != null) {
+                    profile = updated
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun deleteAccount(onDeleted: () -> Unit = {}) {
+        viewModelScope.launch {
+            val success = authRepo.deleteAccount()
+            if (success) {
+                profile = null
+                puzzles = emptyList()
+                userPuzzles = emptyList()
+                progressByPuzzle = emptyMap()
+                dailyChallenge = null
+                leaderboard = emptyMap()
+                authRepo.logout()
+                onDeleted()
             }
         }
     }

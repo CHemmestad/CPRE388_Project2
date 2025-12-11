@@ -65,7 +65,9 @@ fun DashboardScreen(
             style = MaterialTheme.typography.titleMedium
         )
         val playedByUser: Map<String, Timestamp> = profile?.puzzlesPlayed ?: emptyMap()
-        val playablePuzzles = puzzles.filter { playedByUser.containsKey(it.id) }
+        val playablePuzzles = puzzles
+            .filter { playedByUser.containsKey(it.id) }
+            .sortedByDescending { playedByUser[it.id]?.seconds ?: 0 }
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()

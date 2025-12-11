@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,6 +52,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.random.Random
+import org.json.JSONObject
 
 @Composable
 @RequiresApi(Build.VERSION_CODES.O)
@@ -60,7 +62,7 @@ fun PatternMemoryScreen(
     modifier: Modifier = Modifier,
     onProgressUpdated: (PuzzleProgress) -> Unit = {},  // NEW
     onBack: () -> Unit = {}
-)
+    )
  {
     val context = LocalContext.current
     val startSoundPlayer = remember { MediaPlayer.create(context, R.raw.start_sound) }
@@ -79,12 +81,14 @@ fun PatternMemoryScreen(
     val tiles = remember { defaultPatternTiles() }
     val scope = rememberCoroutineScope()
 
-     var round by rememberSaveable { mutableStateOf(progress?.currentLevel ?: 1) }
-     var phase by remember { mutableStateOf(PatternPhase.Preview) }
+    val restored = remember(progress?.inProgressState) { progress?.inProgressState?.let(::decodeState) }
+
+     var round by rememberSaveable { mutableStateOf(restored?.round ?: progress?.currentLevel ?: 1) }
+     var phase by remember { mutableStateOf(restored?.phase ?: PatternPhase.Preview) }
     var activeTileIndex by remember { mutableStateOf<Int?>(null) }
     var previewTrigger by remember { mutableStateOf(0) }
-    var userStep by remember { mutableStateOf(0) }
-    var mistakes by remember { mutableStateOf(0) }
+    var userStep by remember { mutableStateOf(restored?.userStep ?: 0) }
+    var mistakes by remember { mutableStateOf(restored?.mistakes ?: 0) }
 
     val patternLength = max(3, round + 2)
     val pattern = remember(puzzle.id, round) {
@@ -122,7 +126,7 @@ fun PatternMemoryScreen(
          round += 1
          startPreview()
      }
-     fun buildProgress(): PuzzleProgress {
+     fun buildProgress(inProgressState: String? = null): PuzzleProgress {
          // Use existing progress as baseline if present
          val previous = progress
 
@@ -135,9 +139,19 @@ fun PatternMemoryScreen(
              levelsUnlocked = newLevelsUnlocked,
              bestScore = newBestScore,
              bestTime = previous?.bestTime,   // you can update this later with real timing
-             inProgressState = null           // later: JSON of exact game state if you want
+             inProgressState = inProgressState
          )
      }
+
+    fun buildInProgressState(): String {
+        val json = JSONObject()
+        json.put("round", round)
+        json.put("phase", phase.name)
+        json.put("userStep", userStep)
+        json.put("mistakes", mistakes)
+        json.put("patternLength", patternLength)
+        return json.toString()
+    }
 
 
     fun handleTileTap(tileIndex: Int) {
@@ -156,16 +170,27 @@ fun PatternMemoryScreen(
             if (userStep == pattern.size) {
                 phase = PatternPhase.Completed
                 // user successfully completed this round -> save progress
-                onProgressUpdated(buildProgress())
+                onProgressUpdated(buildProgress(inProgressState = null))
             }
         } else {
             mistakes += 1
             incorrectSoundPlayer.playFromStart()
             phase = PatternPhase.Failed
             // even on failure we can save current round as progress
-            onProgressUpdated(buildProgress())
+            onProgressUpdated(buildProgress(inProgressState = null))
         }
 
+    }
+
+    BackHandler {
+        onProgressUpdated(buildProgress(inProgressState = buildInProgressState()))
+        onBack()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            onProgressUpdated(buildProgress(inProgressState = buildInProgressState()))
+        }
     }
 
 
@@ -458,6 +483,23 @@ private fun PatternPhase.statusHeadline(): String = when (this) {
     PatternPhase.Completed -> "Perfect memory!"
     PatternPhase.Failed -> "Let's try again"
 }
+
+private data class PatternSavedState(
+    val round: Int,
+    val phase: PatternPhase,
+    val userStep: Int,
+    val mistakes: Int
+)
+
+private fun decodeState(raw: String): PatternSavedState? = runCatching {
+    val obj = JSONObject(raw)
+    val round = obj.optInt("round", 1).coerceAtLeast(1)
+    val phaseName = obj.optString("phase", PatternPhase.Preview.name)
+    val phase = PatternPhase.entries.firstOrNull { it.name == phaseName } ?: PatternPhase.Preview
+    val userStep = obj.optInt("userStep", 0).coerceAtLeast(0)
+    val mistakes = obj.optInt("mistakes", 0).coerceAtLeast(0)
+    PatternSavedState(round, phase, userStep, mistakes)
+}.getOrNull()
 
 private fun defaultPatternTiles(): List<PatternTile> = listOf(
     PatternTile(index = 0, label = "A", color = Color(0xFFE53935)),

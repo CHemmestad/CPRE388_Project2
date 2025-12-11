@@ -366,7 +366,7 @@ fun DailyChallengeGeneratorScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Sending to Gemini…")
             } else {
-                Text("Generate Mastermind Puzzle")
+                Text("Generate daily challenge with Gemini")
             }
         }
 

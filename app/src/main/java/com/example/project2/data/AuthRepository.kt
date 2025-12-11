@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import java.time.Instant
 
 
@@ -134,6 +135,33 @@ class AuthRepository {
     fun logout() {
         auth.signOut()
         Log.d("AuthRepository", "User logged out")
+    }
+
+    /**
+     * Update basic profile fields in Firestore and return the updated profile.
+     */
+    suspend fun updateProfile(userId: String, displayName: String, bio: String): PlayerProfile? {
+        val docRef = db.collection("users").document(userId)
+        docRef.update(mapOf("displayName" to displayName, "bio" to bio)).await()
+        val snapshot = docRef.get().await()
+        return snapshot.toObject(PlayerProfile::class.java)
+    }
+
+    /**
+     * Delete Firestore user document and Firebase Auth account.
+     * Returns true on success, false otherwise.
+     */
+    suspend fun deleteAccount(): Boolean {
+        val currentUser = auth.currentUser ?: return false
+        return try {
+            val userId = currentUser.uid
+            db.collection("users").document(userId).delete().await()
+            currentUser.delete().await()
+            true
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Failed to delete account: ${e.message}")
+            false
+        }
     }
 
     /**

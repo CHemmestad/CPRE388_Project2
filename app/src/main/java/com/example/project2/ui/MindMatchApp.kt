@@ -206,6 +206,7 @@ fun MindMatchApp(
                     PuzzleLibraryScreen(
                         puzzles = viewModel.puzzles,
                         progress = viewModel.progressByPuzzle,
+                        lastPlayed = viewModel.profile?.puzzlesPlayed ?: emptyMap(),
                         onPlayPuzzle = onPlayPuzzle
                     )
                 }
@@ -220,7 +221,9 @@ fun MindMatchApp(
                     DailyChallengeScreen(
                         challenge = viewModel.dailyChallenge,
                         onStartChallenge = {
-                            navController.navigate(DAILY_PLAY_ROUTE)
+                            viewModel.dailyChallenge?.puzzle?.let { dailyPuzzle ->
+                                onPlayPuzzle(dailyPuzzle)
+                            }
                         }
                     )
                 }
@@ -235,6 +238,12 @@ fun MindMatchApp(
                         profile = viewModel.profile,
                         userPuzzles = viewModel.userPuzzles,
                         onDeletePuzzle = { puzzle -> viewModel.deleteUserPuzzle(puzzle.id) },
+                        onSaveProfile = { name, bio -> viewModel.updateProfile(name, bio) },
+                        onDeleteAccount = {
+                            viewModel.deleteAccount {
+                                isAuthenticated = false
+                            }
+                        },
                         onLogout = { isAuthenticated = false }
                     )
                 }
@@ -305,6 +314,10 @@ fun MindMatchApp(
                                 MastermindScreen(
                                     puzzle = puzzle,
                                     config = config,
+                                    progress = progress,
+                                    onProgressUpdated = { newProgress ->
+                                        viewModel.saveProgress(newProgress)
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
