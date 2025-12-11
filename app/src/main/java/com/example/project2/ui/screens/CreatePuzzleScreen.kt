@@ -67,6 +67,12 @@ import java.util.UUID
 import android.net.Uri
 import androidx.compose.ui.res.painterResource
 
+/**
+ * UI for crafting new puzzles (Jigsaw or Mastermind), uploading assets, and pushing them to Firebase.
+ *
+ * @param modifier layout modifier passed from parent
+ * @param onPuzzleCreated callback fired after a puzzle is successfully stored
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePuzzleScreen(
@@ -98,6 +104,7 @@ fun CreatePuzzleScreen(
             imageUri = uri
         }
     )
+    // Curated palette for Mastermind color chips; pairs label with its swatch color.
     val mastermindPalette = remember {
         listOf(
             "Red" to Color(0xFFE53935),
@@ -228,7 +235,7 @@ fun CreatePuzzleScreen(
                         }
                     }
                 ) {
-                    Text("Seed puzzle types (dev)")
+                    Text("Seed puzzle types (dev)") // Dev helper to ensure dropdown has options.
                 }
 
                 if (puzzleType.equals("Mastermind", ignoreCase = true)) {
@@ -287,19 +294,19 @@ fun CreatePuzzleScreen(
                                 .horizontalScroll(rememberScrollState())
                                 .padding(vertical = 8.dp)
                         ) {
-                            localImages.forEach { imageOption ->
-                                Card(
-                                    modifier = Modifier
-                                        .width(140.dp)
-                                        .height(140.dp)
-                                        .padding(end = 8.dp)
-                                        .clickable {
-                                            // Instantly create this default puzzle
-                                            scope.launch {
-                                                try {
-                                                    val puzzleId = UUID.randomUUID().toString()
-                                                    val resourceUri =
-                                                        Uri.parse("android.resource://${context.packageName}/${imageOption.resId}")
+                    localImages.forEach { imageOption ->
+                        Card(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .height(140.dp)
+                                .padding(end = 8.dp)
+                                .clickable {
+                                    // Instantly create this default puzzle with bundled art.
+                                    scope.launch {
+                                        try {
+                                            val puzzleId = UUID.randomUUID().toString()
+                                            val resourceUri =
+                                                Uri.parse("android.resource://${context.packageName}/${imageOption.resId}")
                                                     val imageUrl = withContext(Dispatchers.IO) {
                                                         repository.uploadPuzzleImage(
                                                             resourceUri,
@@ -507,6 +514,22 @@ fun CreatePuzzleScreen(
     }
 }
 
+/**
+ * Mastermind-specific configuration section allowing color selection, slots/guesses, and code editing.
+ *
+ * @param palette available color swatches to choose from
+ * @param selectedColors currently chosen colors for the puzzle
+ * @param slots number of slots in the secret code
+ * @param guesses number of guesses allowed
+ * @param levels number of sequential stages
+ * @param code current code selection per slot
+ * @param onColorsChanged invoked when palette selections change
+ * @param onSlotsChanged invoked when slot count changes
+ * @param onGuessesChanged invoked when allowed guesses change
+ * @param onLevelsChanged invoked when level count changes
+ * @param onCodeChanged invoked when the secret code changes
+ * @return composable UI for configuring Mastermind parameters
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MastermindConfigSection(
@@ -660,15 +683,30 @@ private fun MastermindConfigSection(
     }
 }
 
+/**
+ * Ensure the Mastermind code list matches slot count and only uses selected colors.
+ *
+ * @param colors palette selected for the puzzle
+ * @param slots number of slots in the code
+ * @param current existing code entries that may need trimming
+ * @return code list sized to `slots` with values constrained to `colors`
+ */
 private fun adjustMastermindCode(colors: Set<String>, slots: Int, current: List<String>): List<String> {
     if (slots <= 0) return emptyList()
     if (colors.isEmpty()) return List(slots) { "" }
     val available = colors.toList()
     return MutableList(slots) { index ->
+        // Keep an existing value if it’s still valid; otherwise backfill with the first available color.
         current.getOrNull(index)?.takeIf { it in colors } ?: available.first()
     }
 }
 
+/**
+ * Resolve a display string to a [PuzzleType], falling back to PATTERN_MEMORY if unknown.
+ *
+ * @param selected user-friendly puzzle type string
+ * @return matching [PuzzleType] enum or a safe default
+ */
 private fun resolvePuzzleType(selected: String): PuzzleType {
     val normalized = selected.trim().replace("\\s+".toRegex(), "_").uppercase()
     return PuzzleType.entries.firstOrNull { entry ->

@@ -1,6 +1,12 @@
 package com.example.project2.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -12,6 +18,11 @@ import androidx.compose.ui.unit.dp
 // A simple data class to define a difficulty level for clarity
 private data class Difficulty(val name: String, val gridSize: Int)
 
+/**
+ * Lets the player pick a jigsaw difficulty, exposing the grid size via callback.
+ *
+ * @param onDifficultySelected emits the chosen grid size (e.g., 3 for 3x3)
+ */
 @Composable
 fun DifficultySelectionScreen(
     onDifficultySelected: (Int) -> Unit // A callback to notify which grid size was chosen

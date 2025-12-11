@@ -17,6 +17,12 @@ import com.google.firebase.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * Central app state holder: loads data from Firebase-backed repositories and exposes UI-facing state.
+ *
+ * @param authRepo authentication data source
+ * @param repository Firebase implementation for puzzles, progress, and leaderboards
+ */
 class MindMatchViewModel(
     private val authRepo: AuthRepository = AuthRepository(),
     private val repository: FirebaseMindMatchRepository = FirebaseMindMatchRepository()
@@ -49,12 +55,16 @@ class MindMatchViewModel(
         }
     }
 
+    /** Reload everything after auth or significant actions. */
     fun reloadData() {
         viewModelScope.launch {
             loadInitialData()
         }
     }
 
+    /**
+     * Load profile, puzzles, progress, daily challenge, and leaderboard from Firebase.
+     */
     private suspend fun loadInitialData() {
         isLoading = true
         try {
@@ -95,6 +105,12 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Submit a leaderboard score and refresh cached leaderboards.
+     *
+     * @param puzzleId target puzzle id
+     * @param score numeric score or time depending on puzzle type
+     */
     fun submitLeaderboardScore(puzzleId: String, score: Int) {
         val name = profile?.displayName ?: "Player"
         viewModelScope.launch {
@@ -112,6 +128,9 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Reload puzzles and associated progress from Firebase.
+     */
     fun refreshPuzzles() {
         viewModelScope.launch {
             try {
@@ -125,6 +144,11 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Record a puzzle play timestamp for the active user.
+     *
+     * @param puzzleId id of the played puzzle
+     */
     fun markPuzzlePlayed(puzzleId: String) {
         val userId = authRepo.getCurrentUserId() ?: return
         viewModelScope.launch {
@@ -133,6 +157,7 @@ class MindMatchViewModel(
         }
     }
 
+    /** Remove a user-created puzzle and refresh local state. */
     fun deleteUserPuzzle(puzzleId: String) {
         viewModelScope.launch {
             try {
@@ -146,6 +171,9 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Fetch and merge the latest daily challenge.
+     */
     fun refreshDailyChallenge() {
         viewModelScope.launch {
             try {
@@ -156,6 +184,12 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Update profile fields for the current user.
+     *
+     * @param displayName new display name
+     * @param bio profile bio text
+     */
     fun updateProfile(displayName: String, bio: String) {
         val userId = authRepo.getCurrentUserId() ?: return
         viewModelScope.launch {
@@ -170,6 +204,11 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Delete the current account and clear local state.
+     *
+     * @param onDeleted callback invoked after successful deletion
+     */
     fun deleteAccount(onDeleted: () -> Unit = {}) {
         viewModelScope.launch {
             val success = authRepo.deleteAccount()
@@ -186,6 +225,11 @@ class MindMatchViewModel(
         }
     }
 
+    /**
+     * Merge the latest daily challenge into existing puzzles/state.
+     *
+     * @param latest daily challenge payload to cache
+     */
     private fun mergeDailyChallenge(latest: DailyChallenge?) {
         dailyChallenge = latest
         val challengePuzzle = latest?.puzzle ?: return
@@ -194,6 +238,12 @@ class MindMatchViewModel(
         puzzles = puzzles.filterNot { it.id == challengePuzzle.id } + challengePuzzle
     }
 
+    /**
+     * Submit a jigsaw completion time to the leaderboard.
+     *
+     * @param timeInSeconds completion time
+     * @param gridSize size of the jigsaw grid
+     */
     fun saveJigsawScore(timeInSeconds: Long, gridSize: Int) {
         val name = profile?.displayName ?: "Anonymous"
 

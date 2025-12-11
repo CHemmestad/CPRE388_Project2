@@ -49,7 +49,14 @@ import com.example.project2.data.AuthRepository
 import com.example.project2.data.DailyChallengeGeneratorRepository
 import kotlinx.coroutines.launch
 
-// ====================== LOGIN SCREEN ======================
+/**
+ * Entry point for authentication where users can sign in or reveal a hidden admin flow.
+ *
+ * @param modifier layout modifier passed from parent
+ * @param onLogin callback invoked after a successful login
+ * @param onCreateAccount navigates to the sign-up screen
+ * @param onSecretAccess Easter egg action triggered by tapping the invisible hotspot
+ */
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
@@ -162,7 +169,13 @@ fun LoginScreen(
     }
 }
 
-// ====================== CREATE ACCOUNT SCREEN ======================
+/**
+ * Sign-up form that creates a new Firebase auth user and profile.
+ *
+ * @param modifier layout modifier passed from parent
+ * @param onCreateAccount callback fired after successful account creation
+ * @param onBackToLogin navigation back to the login screen
+ */
 @Composable
 fun CreateAccountScreen(
     modifier: Modifier = Modifier,
@@ -283,6 +296,13 @@ fun CreateAccountScreen(
     }
 }
 
+/**
+ * helper screen to generate and store a daily Mastermind challenge via Gemini.
+ *
+ * @param modifier layout modifier passed from parent
+ * @param onGenerateDailyChallenge emits the raw JSON saved to Firestore
+ * @param onBackToLogin navigation callback to return to authentication
+ */
 @Composable
 fun DailyChallengeGeneratorScreen(
     modifier: Modifier = Modifier,
@@ -387,6 +407,11 @@ fun DailyChallengeGeneratorScreen(
     }
 }
 
+/**
+ * Compose the Gemini prompt used to generate a Mastermind daily challenge.
+ *
+ * @return formatted prompt describing palette, constraints, and payload shape
+ */
 private fun buildMastermindPrompt(): String {
     return buildString {
         appendLine("You are an elite puzzle designer for the MindMatch mobile app. Act like a user filling out the Mastermind puzzle builder and generate all required fields yourself.")

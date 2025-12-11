@@ -48,6 +48,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.example.project2.ui.MindMatchViewModel
 
+/**
+ * Drag-and-drop jigsaw experience with timing and leaderboard submission.
+ *
+ * @param puzzle descriptor for the puzzle being played
+ * @param onBack callback to exit to previous screen
+ * @param gridSize dimension of the board (e.g., 3 for 3x3)
+ * @param viewModel shared view model used to submit leaderboard scores
+ */
 @Composable
 fun JigsawPuzzleScreen(
     puzzle: PuzzleDescriptor,
@@ -100,6 +108,7 @@ fun JigsawPuzzleScreen(
                 android.widget.Toast.makeText(context, "Score saved!", android.widget.Toast.LENGTH_SHORT).show()
             }
         } else if (!isSolved) {
+            // Simple ticker to track elapsed time while the board is unsolved.
             while (true) {
                 delay(1000L)
                 elapsedTime++
@@ -107,6 +116,12 @@ fun JigsawPuzzleScreen(
         }
     }
 
+    /**
+     * Format elapsed seconds as mm:ss for display.
+     *
+     * @param seconds total elapsed seconds
+     * @return formatted timer string
+     */
     fun formatTime(seconds: Long): String {
         val minutes = TimeUnit.SECONDS.toMinutes(seconds)
         val remainingSeconds = seconds - TimeUnit.MINUTES.toSeconds(minutes)
@@ -122,6 +137,7 @@ fun JigsawPuzzleScreen(
     )
 
     val imageToUse = remember(puzzle.id) {
+        // Randomize image for the template; otherwise honor provided resource id.
         if (puzzle.id == "play_jigsaw_template") {
             availableImages.random()
         } else {
@@ -286,6 +302,20 @@ fun JigsawPuzzleScreen(
     }
 }
 
+/**
+ * Renders the jigsaw grid, handles drag gestures, and draws the floating piece.
+ *
+ * @param pieces current shuffled pieces
+ * @param gridSize dimension of the grid (e.g., 3 = 3x3)
+ * @param draggedPieceId id of the piece being dragged
+ * @param targetDropIndex index of the hovered drop target
+ * @param isSolved flag to disable interactions when completed
+ * @param fingerDragOffset last known finger position relative to board
+ * @param onDragStart called with piece id when drag begins
+ * @param onDrag called with pointer position as drag continues
+ * @param onDragEnd called when drag ends or cancels
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 private fun PuzzleBoard(
     pieces: List<PuzzlePiece>,
@@ -339,7 +369,7 @@ private fun PuzzleBoard(
                     .pointerInput(pieces) {
                         detectDragGestures(
                             onDragStart = { startOffset ->
-                                // <-- 6. MAKE onDragStart DYNAMIC
+                                // Resolve which piece was pressed so we can move it.
                                 val pieceSize = size.width / gridSize
                                 val col =
                                     (startOffset.x / pieceSize).toInt().coerceIn(0, gridSize - 1)
@@ -376,12 +406,20 @@ private fun PuzzleBoard(
     }
 }
 
+/** Represents one sliced jigsaw tile and its original location. */
 private data class PuzzlePiece(
     val id: Int,
     val bitmap: ImageBitmap,
     val correctOffset: Offset
 )
 
+/**
+ * Slice a bitmap into equal square pieces for the jigsaw board.
+ *
+ * @param imageBitmap source image to slice
+ * @param gridSize dimension of the grid (e.g., 4 = 4x4)
+ * @return list of puzzle pieces annotated with their original offsets
+ */
 private fun sliceBitmap(imageBitmap: ImageBitmap, gridSize: Int): List<PuzzlePiece> {
     val pieceWidth = imageBitmap.width / gridSize
     val pieceHeight = imageBitmap.height / gridSize

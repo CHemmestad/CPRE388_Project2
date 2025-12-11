@@ -21,7 +21,13 @@ class AuthRepository {
     private val db = FirebaseFirestore.getInstance()
 
     /**
-     * Create a new user account and store their PlayerProfile in Firestore.
+     * Create a new user account and store the PlayerProfile document in Firestore.
+     *
+     * @param email user email
+     * @param password raw password
+     * @param displayName name to show in the app
+     * @param context Android context for toast
+     * @param onResult callback with success flag and optional error message
      */
     fun signUp(
         email: String,
@@ -59,6 +65,14 @@ class AuthRepository {
             }
     }
 
+    /**
+     * Helper to create a Firestore profile document for a new user.
+     *
+     * @param userId Firebase auth uid
+     * @param displayName name to store on the profile
+     * @param email user email for logging
+     * @param onResult callback with success flag and optional error message
+     */
     private fun createFirestoreProfile(
         userId: String,
         displayName: String,
@@ -85,7 +99,11 @@ class AuthRepository {
 
 
     /**
-     * Log in existing user and verify authentication.
+     * Log in an existing user via Firebase Auth.
+     *
+     * @param email user email
+     * @param password raw password
+     * @param onResult callback with success flag and optional error message
      */
     fun login(
         email: String,
@@ -105,7 +123,10 @@ class AuthRepository {
     }
 
     /**
-     * Load the logged-in user's PlayerProfile from Firestore.
+     * Load a user's PlayerProfile document from Firestore.
+     *
+     * @param userId UID of the user to load
+     * @param onResult callback with the profile (or null) and optional error message
      */
     fun loadUserProfile(
         userId: String,
@@ -130,7 +151,7 @@ class AuthRepository {
     }
 
     /**
-     * Logs the user out of Firebase Auth.
+     * Log out the current Firebase Auth user.
      */
     fun logout() {
         auth.signOut()
@@ -139,6 +160,10 @@ class AuthRepository {
 
     /**
      * Update basic profile fields in Firestore and return the updated profile.
+     *
+     * @param userId UID to update
+     * @param displayName new display name
+     * @param bio new bio
      */
     suspend fun updateProfile(userId: String, displayName: String, bio: String): PlayerProfile? {
         val docRef = db.collection("users").document(userId)
@@ -148,8 +173,9 @@ class AuthRepository {
     }
 
     /**
-     * Delete Firestore user document and Firebase Auth account.
-     * Returns true on success, false otherwise.
+     * Delete the Firestore user document and Firebase Auth account.
+     *
+     * @return true on success; false otherwise
      */
     suspend fun deleteAccount(): Boolean {
         val currentUser = auth.currentUser ?: return false

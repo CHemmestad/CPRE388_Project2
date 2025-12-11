@@ -5,7 +5,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 
-// Firestore-friendly version of PuzzleDescriptor
+/** Firestore-friendly version of PuzzleDescriptor. */
 data class FirebasePuzzle(
     val id: String = "",
     val title: String = "",
@@ -23,6 +23,7 @@ data class FirebasePuzzle(
     val mastermindCode: List<String>? = null
 )
 
+/** Firestore-friendly version of PuzzleProgress. */
 data class FirebasePuzzleProgress(
     val puzzleId: String = "",
     val currentLevel: Int = 0,

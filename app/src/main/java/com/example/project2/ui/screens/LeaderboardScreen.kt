@@ -21,6 +21,13 @@ import com.example.project2.data.LeaderboardEntry
 import com.example.project2.data.PuzzleDescriptor
 import com.example.project2.data.PuzzleType
 
+/**
+ * Displays leaderboards grouped by puzzle, showing the top scores for each.
+ *
+ * @param leaderboard map of puzzle id to leaderboard entries
+ * @param puzzles map of puzzle id to descriptors for display metadata
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 fun LeaderboardScreen(
     leaderboard: Map<String, List<LeaderboardEntry>>,
@@ -62,15 +69,21 @@ fun LeaderboardScreen(
     }
 }
 
+/**
+ * Card showing the top entries for a specific puzzle.
+ *
+ * @param puzzle puzzle descriptor for metadata
+ * @param entries leaderboard entries to render
+ */
 @Composable
 private fun LeaderboardCard(
     puzzle: PuzzleDescriptor,
     entries: List<LeaderboardEntry>
 ) {
     val sortedEntries = if (puzzle.type == PuzzleType.JIGSAW) {
-        entries.sortedBy { it.score }
+        entries.sortedBy { it.score } // Faster completion is better for Jigsaw.
     } else {
-        entries.sortedByDescending { it.score }
+        entries.sortedByDescending { it.score } // Higher score wins for other puzzles.
     }.take(5)
 
     Card {

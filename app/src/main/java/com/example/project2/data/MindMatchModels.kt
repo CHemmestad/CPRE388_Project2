@@ -20,6 +20,7 @@ data class PlayerProfile(
     val puzzlesPlayed: Map<String, Timestamp> = emptyMap()
 )
 
+/** Describes a puzzle shown in the app. */
 data class PuzzleDescriptor(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
@@ -37,6 +38,7 @@ data class PuzzleDescriptor(
     val mastermindConfig: MastermindConfig? = null
 )
 
+/** Per-user progress for a puzzle. */
 data class PuzzleProgress(
     val puzzleId: String,
     val currentLevel: Int,
@@ -46,6 +48,7 @@ data class PuzzleProgress(
     val inProgressState: String? = null
 )
 
+/** Leaderboard entry for a puzzle. */
 data class LeaderboardEntry(
     val puzzleId: String,
     val playerName: String,
@@ -53,12 +56,14 @@ data class LeaderboardEntry(
     val recordedAt: Instant
 )
 
+/** Daily challenge bundle. */
 data class DailyChallenge(
     val puzzle: PuzzleDescriptor,
     val expiresAt: Instant,
     val content: DailyPuzzleContent
 )
 
+/** Supported puzzle types. */
 enum class PuzzleType(val displayName: String) {
     PATTERN_MEMORY("Pattern Memory"),
     LOGIC_GRID("Logic Grid"),
@@ -69,10 +74,12 @@ enum class PuzzleType(val displayName: String) {
     MASTERMIND("Mastermind")
 }
 
+/** Puzzle difficulty levels. */
 enum class Difficulty {
     EASY, MEDIUM, HARD, EXPERT
 }
 
+/** Content for a daily puzzle (grid, controls, stats). */
 data class DailyPuzzleContent(
     val instructions: String,
     val grid: List<List<PuzzleCell>>,
@@ -80,11 +87,13 @@ data class DailyPuzzleContent(
     val stats: PuzzleStats
 )
 
+/** A single cell in a grid-based puzzle. */
 data class PuzzleCell(
     val value: String,
     val state: PuzzleCellState = PuzzleCellState.Neutral
 )
 
+/** Possible cell states. */
 enum class PuzzleCellState {
     Neutral,
     Active,
@@ -93,18 +102,21 @@ enum class PuzzleCellState {
     Disabled
 }
 
+/** Control button definition for a puzzle. */
 data class PuzzleControl(
     val id: String,
     val label: String,
     val isPrimary: Boolean = false
 )
 
+/** Stats for a daily puzzle session. */
 data class PuzzleStats(
     val target: Int,
     val streak: Int,
     val timeRemainingSeconds: Int
 )
 
+/** Configuration for Mastermind puzzles. */
 data class MastermindConfig(
     val colors: List<String>,
     val slots: Int,

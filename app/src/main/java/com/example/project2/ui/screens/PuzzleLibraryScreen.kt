@@ -34,6 +34,15 @@ import com.example.project2.data.Difficulty
 import com.google.firebase.Timestamp
 import com.example.project2.ui.widgets.PuzzleCard
 
+/**
+ * Library view for browsing and filtering available puzzles.
+ *
+ * @param puzzles list of available puzzle descriptors
+ * @param progress per-puzzle progress map keyed by id
+ * @param lastPlayed timestamps of recent plays for sorting
+ * @param modifier layout modifier passed from parent
+ * @param onPlayPuzzle callback when the user taps play on a puzzle card
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PuzzleLibraryScreen(
@@ -144,7 +153,7 @@ fun PuzzleLibraryScreen(
         ) {
             val puzzlesToShow = puzzles
                 .filter { puzzle ->
-                    puzzle.type != PuzzleType.JIGSAW || puzzle.id == "play_jigsaw_template"
+                    puzzle.type != PuzzleType.JIGSAW || puzzle.id == "play_jigsaw_template" // Only surface the template for Jigsaw.
                 }
                 .filter { puzzle ->
                     typeFilter == "All" || puzzle.type.displayName == typeFilter

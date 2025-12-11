@@ -10,6 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+/**
+ * Compact chip for displaying a stat label and value pair.
+ *
+ * @param title stat label
+ * @param value stat value
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 fun StatChip(
     title: String,

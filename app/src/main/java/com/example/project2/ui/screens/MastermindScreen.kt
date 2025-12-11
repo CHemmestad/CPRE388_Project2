@@ -49,6 +49,15 @@ import kotlin.math.max
 data class MastermindFeedback(val exact: Int, val colorOnly: Int)
 data class MastermindGuess(val values: List<String>, val feedback: MastermindFeedback)
 
+/**
+ * Mastermind gameplay UI with persistence, feedback, and progress updates.
+ *
+ * @param puzzle puzzle descriptor being played
+ * @param config Mastermind configuration (colors, slots, guesses, code)
+ * @param progress prior progress to restore from, if any
+ * @param onProgressUpdated callback to persist progress after key events
+ * @param onBack invoked when user navigates back
+ */
 @Composable
 fun MastermindScreen(
     puzzle: PuzzleDescriptor,
@@ -261,6 +270,15 @@ fun MastermindScreen(
     }
 }
 
+/**
+ * Row showing a guess with optional feedback pegs.
+ *
+ * @param label text label for the row
+ * @param values chosen colors for each slot
+ * @param feedback feedback counts or null when still editing
+ * @param palette available colors for rendering
+ * @param onSlotTapped optional handler to clear/change a slot
+ */
 @Composable
 private fun GuessRow(
     label: String,
@@ -298,6 +316,11 @@ private fun GuessRow(
     }
 }
 
+/**
+ * Displays colored pegs indicating exact vs color-only matches.
+ *
+ * @param feedback counts of exact and color-only hits
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FeedbackDots(feedback: MastermindFeedback) {
@@ -323,6 +346,19 @@ private fun FeedbackDots(feedback: MastermindFeedback) {
     }
 }
 
+/**
+ * Build a progress record from the current game state.
+ *
+ * @param puzzle current puzzle descriptor
+ * @param config mastermind configuration in play
+ * @param previous previous progress to retain best metrics
+ * @param history submitted guesses
+ * @param currentGuess current in-progress guess
+ * @param gameOver whether the round has ended
+ * @param statusMessage latest status text
+ * @param won whether the code was cracked
+ * @return aggregated [PuzzleProgress] ready for persistence
+ */
 private fun buildProgress(
     puzzle: PuzzleDescriptor,
     config: MastermindConfig,
@@ -333,6 +369,7 @@ private fun buildProgress(
     statusMessage: String,
     won: Boolean
 ): PuzzleProgress {
+    // Higher score awarded for winning sooner (more remaining guesses).
     val guessesMade = history.size
     val winScore = if (won) config.guesses - guessesMade + 1 else 0
     val bestScore = max(previous?.bestScore ?: 0, winScore)
@@ -354,6 +391,15 @@ private data class MastermindSavedState(
     val statusMessage: String
 )
 
+/**
+ * Serialize the current game state to JSON for persistence.
+ *
+ * @param history submitted guesses with feedback
+ * @param currentGuess in-progress guess values
+ * @param gameOver whether the session is over
+ * @param statusMessage status to restore
+ * @return JSON string representation
+ */
 private fun encodeState(
     history: List<MastermindGuess>,
     currentGuess: List<String>,
@@ -381,6 +427,12 @@ private fun encodeState(
     return root.toString()
 }
 
+/**
+ * Deserialize a saved JSON state into a structured object.
+ *
+ * @param raw JSON string from storage
+ * @return saved state or null if parsing fails
+ */
 private fun decodeState(raw: String): MastermindSavedState? = runCatching {
     val root = JSONObject(raw)
     val historyArray = root.optJSONArray("history") ?: JSONArray()
@@ -402,6 +454,12 @@ private fun decodeState(raw: String): MastermindSavedState? = runCatching {
     MastermindSavedState(history, currentGuess, gameOver, status)
 }.getOrNull()
 
+/**
+ * Palette picker for Mastermind colors.
+ *
+ * @param palette list of color names
+ * @param onColorSelected invoked when a color is chosen
+ */
 @Composable
 private fun ColorPickerRow(
     palette: List<String>,
@@ -433,6 +491,13 @@ private fun ColorPickerRow(
     }
 }
 
+/**
+ * Evaluate a guess against the secret code, returning exact and color-only matches.
+ *
+ * @param secret target code
+ * @param guess player's guess
+ * @return feedback counts
+ */
 private fun evaluateGuess(secret: List<String>, guess: List<String>): MastermindFeedback {
     var exact = 0
     val secretCounts = mutableMapOf<String, Int>()
@@ -458,6 +523,13 @@ private fun evaluateGuess(secret: List<String>, guess: List<String>): Mastermind
     return MastermindFeedback(exact, colorOnly)
 }
 
+/**
+ * Map a color name to a display color with deterministic fallback.
+ *
+ * @param name color name (case-insensitive)
+ * @param palette palette to help generate fallback colors
+ * @return resolved [Color]
+ */
 private fun colorForName(name: String, palette: List<String>): Color {
     return when (name.trim().lowercase()) {
         "red" -> Color(0xFFE53935)
