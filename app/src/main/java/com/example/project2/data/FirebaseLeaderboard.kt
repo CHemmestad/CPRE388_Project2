@@ -3,6 +3,9 @@ package com.example.project2.data
 import com.google.firebase.Timestamp
 import java.time.Instant
 
+/**
+ * Firestore representation of a leaderboard entry.
+ */
 data class FirebaseLeaderboardEntry(
     val puzzleId: String = "",
     val playerName: String = "",
@@ -10,7 +13,7 @@ data class FirebaseLeaderboardEntry(
     val recordedAt: Timestamp = Timestamp.now()
 )
 
-// Firebase -> app model
+/** Convert Firestore entry to app model. */
 fun FirebaseLeaderboardEntry.toEntry(): LeaderboardEntry =
     LeaderboardEntry(
         puzzleId = puzzleId,
@@ -19,7 +22,7 @@ fun FirebaseLeaderboardEntry.toEntry(): LeaderboardEntry =
         recordedAt = Instant.ofEpochMilli(recordedAt.toDate().time)
     )
 
-// app model -> Firebase
+/** Convert app model to Firestore entry. */
 fun LeaderboardEntry.toFirebase(): FirebaseLeaderboardEntry =
     FirebaseLeaderboardEntry(
         puzzleId = puzzleId,

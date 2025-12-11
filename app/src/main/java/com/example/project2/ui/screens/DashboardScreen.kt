@@ -33,6 +33,17 @@ import com.example.project2.ui.widgets.PuzzleCard
 import com.example.project2.ui.widgets.StatChip
 import com.google.firebase.Timestamp
 
+/**
+ * Dashboard hub showing greeting, daily challenge entry, and a carousel of recent puzzles.
+ *
+ * @param profile active player profile; null-safe for loading
+ * @param puzzles all puzzles available to resume
+ * @param progress per-puzzle progress keyed by id
+ * @param dailyChallenge the current daily challenge (nullable)
+ * @param modifier layout modifier passed from parent
+ * @param onPlayPuzzle callback when a puzzle resume CTA is tapped
+ * @param onViewDailyChallenge callback when the daily challenge CTA is tapped
+ */
 @Composable
 fun DashboardScreen(
     profile: PlayerProfile?,
@@ -67,7 +78,7 @@ fun DashboardScreen(
         val playedByUser: Map<String, Timestamp> = profile?.puzzlesPlayed ?: emptyMap()
         val playablePuzzles = puzzles
             .filter { playedByUser.containsKey(it.id) }
-            .sortedByDescending { playedByUser[it.id]?.seconds ?: 0 }
+            .sortedByDescending { playedByUser[it.id]?.seconds ?: 0 } // Keep most recently played first.
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -106,6 +117,7 @@ fun DashboardScreen(
     }
 }
 
+/** Greeting block shown when a profile is available. */
 @Composable
 private fun GreetingHeader(profile: PlayerProfile) {
     Column(
@@ -123,6 +135,12 @@ private fun GreetingHeader(profile: PlayerProfile) {
     }
 }
 
+/**
+ * Highlight card for the current daily challenge with CTA.
+ *
+ * @param dailyChallenge daily challenge data to render
+ * @param onViewChallenge callback when CTA is tapped
+ */
 @Composable
 private fun DailyChallengeCard(
     dailyChallenge: DailyChallenge,

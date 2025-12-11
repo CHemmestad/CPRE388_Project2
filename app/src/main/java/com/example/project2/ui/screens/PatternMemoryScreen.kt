@@ -54,6 +54,15 @@ import kotlin.math.max
 import kotlin.random.Random
 import org.json.JSONObject
 
+/**
+ * Pattern memory (Simon-like) gameplay with preview/recall phases and persisted progress.
+ *
+ * @param puzzle puzzle descriptor being played
+ * @param progress prior progress to restore from, if any
+ * @param modifier layout modifier passed from parent
+ * @param onProgressUpdated callback to persist progress or state
+ * @param onBack navigation callback when exiting
+ */
 @Composable
 @RequiresApi(Build.VERSION_CODES.O)
 fun PatternMemoryScreen(
@@ -126,23 +135,34 @@ fun PatternMemoryScreen(
          round += 1
          startPreview()
      }
-     fun buildProgress(inProgressState: String? = null): PuzzleProgress {
-         // Use existing progress as baseline if present
-         val previous = progress
+    /**
+     * Snapshot current progress; optionally include serialized in-progress state.
+     *
+     * @param inProgressState JSON blob for restoring unfinished rounds
+     * @return updated [PuzzleProgress] with best metrics preserved
+     */
+    fun buildProgress(inProgressState: String? = null): PuzzleProgress {
+        // Use existing progress as baseline if present
+        val previous = progress
 
-         val newBestScore = max(previous?.bestScore ?: 0, round)
-         val newLevelsUnlocked = max(previous?.levelsUnlocked ?: 0, round)
+        val newBestScore = max(previous?.bestScore ?: 0, round)
+        val newLevelsUnlocked = max(previous?.levelsUnlocked ?: 0, round)
 
-         return PuzzleProgress(
-             puzzleId = puzzle.id,
-             currentLevel = round,
-             levelsUnlocked = newLevelsUnlocked,
-             bestScore = newBestScore,
-             bestTime = previous?.bestTime,   // you can update this later with real timing
-             inProgressState = inProgressState
-         )
-     }
+        return PuzzleProgress(
+            puzzleId = puzzle.id,
+            currentLevel = round,
+            levelsUnlocked = newLevelsUnlocked,
+            bestScore = newBestScore,
+            bestTime = previous?.bestTime,   // you can update this later with real timing
+            inProgressState = inProgressState
+        )
+    }
 
+    /**
+     * Serialize transient state so users can resume mid-round.
+     *
+     * @return JSON string capturing round, phase, user progress, and mistakes
+     */
     fun buildInProgressState(): String {
         val json = JSONObject()
         json.put("round", round)
@@ -325,6 +345,12 @@ fun PatternMemoryScreen(
     }
 }
 
+/**
+ * Placeholder screen for puzzles that aren't implemented yet.
+ *
+ * @param puzzle puzzle descriptor to display title/type
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 fun PuzzleNotReadyScreen(
     puzzle: PuzzleDescriptor,
@@ -359,6 +385,11 @@ fun PuzzleNotReadyScreen(
     }
 }
 
+/**
+ * Fallback screen when a puzzle cannot be loaded.
+ *
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 fun PuzzleNotFoundScreen(modifier: Modifier = Modifier) {
     Column(
@@ -382,6 +413,16 @@ fun PuzzleNotFoundScreen(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Grid of tappable pattern tiles with active highlight support.
+ *
+ * @param tiles palette of tiles to render
+ * @param columns number of columns in the grid
+ * @param activeTileIndex tile currently highlighted during preview
+ * @param enabled whether user interaction is allowed
+ * @param onTileSelected callback when a tile is tapped
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 private fun PatternBoard(
     tiles: List<PatternTile>,
@@ -418,6 +459,15 @@ private fun PatternBoard(
     }
 }
 
+/**
+ * Individual pattern tile button with active/inactive styling.
+ *
+ * @param tile model containing label, color, and index
+ * @param isActive whether the tile is currently highlighted
+ * @param enabled enables/disables user input
+ * @param onClick invoked when tapped
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 private fun PatternTileButton(
     tile: PatternTile,
@@ -477,6 +527,7 @@ private enum class PatternPhase {
     Failed
 }
 
+/** Short headline text for each phase. */
 private fun PatternPhase.statusHeadline(): String = when (this) {
     PatternPhase.Preview -> "Memorize the pulse"
     PatternPhase.Recall -> "Recreate the pattern"
@@ -491,6 +542,12 @@ private data class PatternSavedState(
     val mistakes: Int
 )
 
+/**
+ * Deserialize persisted pattern state for restoration.
+ *
+ * @param raw JSON string to parse
+ * @return restored state or null when invalid
+ */
 private fun decodeState(raw: String): PatternSavedState? = runCatching {
     val obj = JSONObject(raw)
     val round = obj.optInt("round", 1).coerceAtLeast(1)
@@ -501,6 +558,7 @@ private fun decodeState(raw: String): PatternSavedState? = runCatching {
     PatternSavedState(round, phase, userStep, mistakes)
 }.getOrNull()
 
+/** Default palette of pattern tiles used for the memory grid. */
 private fun defaultPatternTiles(): List<PatternTile> = listOf(
     PatternTile(index = 0, label = "A", color = Color(0xFFE53935)),
     PatternTile(index = 1, label = "B", color = Color(0xFF8E24AA)),
@@ -510,6 +568,13 @@ private fun defaultPatternTiles(): List<PatternTile> = listOf(
     PatternTile(index = 5, label = "F", color = Color(0xFFFF7043))
 )
 
+/**
+ * Generate a deterministic pattern sequence based on puzzle id and round.
+ *
+ * @param seed string seed (typically puzzle id)
+ * @param length number of steps in the pattern
+ * @param tileCount number of available tiles
+ */
 private fun generatePatternSequence(
     seed: String,
     length: Int,
@@ -519,6 +584,12 @@ private fun generatePatternSequence(
     return List(length) { random.nextInt(tileCount) }
 }
 
+/**
+ * Format a duration as m:ss for stats display.
+ *
+ * @receiver duration to format
+ * @return formatted string
+ */
 @RequiresApi(Build.VERSION_CODES.O)
 private fun Duration.toReadableString(): String {
     val totalSeconds = seconds
@@ -527,6 +598,7 @@ private fun Duration.toReadableString(): String {
     return "%d:%02d".format(minutes, secondsRemainder)
 }
 
+/** Safely restart a sound effect from the beginning. */
 private fun MediaPlayer?.playFromStart() {
     this ?: return
     try {

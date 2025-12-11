@@ -42,12 +42,18 @@ import com.example.project2.data.PuzzleStats
 import com.example.project2.ui.util.formatAsDisplay
 import kotlinx.coroutines.delay
 
+/**
+ * Play surface for the daily challenge puzzle, including pattern preview, timer, and controls.
+ *
+ * @param challenge current daily challenge payload; renders loading while null
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 fun DailyChallengePlayScreen(
     challenge: DailyChallenge?,      // <-- ACCEPT NULL
     modifier: Modifier = Modifier
 ) {
-    // handle null/initial loading state
+    // Handle null/initial loading state to avoid crashing while data loads.
     if (challenge == null) {
         Box(
             modifier = Modifier
@@ -73,6 +79,7 @@ fun DailyChallengePlayScreen(
     var roundResult by remember { mutableStateOf<RoundResult?>(null) }
 
     LaunchedEffect(content) {
+        // Reset state when a new challenge arrives.
         activeSequence = generateSequence(content.grid, content.stats.target)
         currentIndex = 0
         cellStates = emptyMap()
@@ -87,6 +94,7 @@ fun DailyChallengePlayScreen(
 
     LaunchedEffect(sequenceVersion) {
         if (sequenceVersion == 0) return@LaunchedEffect
+        // Replay the pattern animation each time we bump the version.
         isTimerRunning = false
         currentIndex = 0
         roundResult = null
@@ -131,6 +139,7 @@ fun DailyChallengePlayScreen(
         timeRemainingSeconds = timeRemaining.coerceAtLeast(0)
     )
 
+    // Local helpers for gameplay events.
     fun startNewPattern() {
         activeSequence = generateSequence(content.grid, content.stats.target)
         currentIndex = 0
@@ -237,6 +246,17 @@ fun DailyChallengePlayScreen(
     }
 }
 
+/**
+ * Card wrapper that shows instructions, status, grid, and controls for the daily puzzle.
+ *
+ * @param content challenge content with grid, controls, and stats
+ * @param statusMessage message displayed above the grid
+ * @param wildcardEnabled whether wildcard mode is active
+ * @param onCellTapped callback when a grid cell is tapped
+ * @param onControlPressed callback when a control button is pressed
+ * @param modifier layout modifier passed from parent
+ * @return composable card body
+ */
 @Composable
 private fun DailyPuzzleBoard(
     content: DailyPuzzleContent,
@@ -291,6 +311,13 @@ private fun DailyPuzzleBoard(
     }
 }
 
+/**
+ * Render the puzzle grid with tap handlers.
+ *
+ * @param grid 2D list of cells to display
+ * @param onCellTapped invoked with row/column on tap
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 private fun PuzzleGrid(
     grid: List<List<PuzzleCell>>,
@@ -318,6 +345,13 @@ private fun PuzzleGrid(
     }
 }
 
+/**
+ * Single puzzle cell with visual state and tap handling.
+ *
+ * @param cell model containing value and state
+ * @param onTap invoked when the cell is tapped (if enabled)
+ * @param modifier layout modifier passed from parent
+ */
 @Composable
 private fun PuzzleCellView(
     cell: PuzzleCell,
@@ -347,6 +381,11 @@ private fun PuzzleCellView(
     }
 }
 
+/**
+ * Strip of high-level stats for the current run.
+ *
+ * @param stats live puzzle stats to display
+ */
 @Composable
 private fun PuzzleScoreStrip(stats: PuzzleStats) {
     Row(
@@ -359,6 +398,13 @@ private fun PuzzleScoreStrip(stats: PuzzleStats) {
     }
 }
 
+/**
+ * Horizontal row of puzzle controls (e.g., Scan, Lock, Wildcard).
+ *
+ * @param controls list of available controls
+ * @param wildcardEnabled whether wildcard is toggled on
+ * @param onControlPressed callback for control selection
+ */
 @Composable
 private fun PuzzleControlRow(
     controls: List<PuzzleControl>,
@@ -399,6 +445,12 @@ private fun PuzzleControlRow(
     }
 }
 
+/**
+ * Small stat badge showing a label and value.
+ *
+ * @param label name of the stat
+ * @param value value to display
+ */
 @Composable
 private fun MiniStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -414,6 +466,11 @@ private fun MiniStat(label: String, value: String) {
     }
 }
 
+/**
+ * Status chips summarizing the current challenge metadata.
+ *
+ * @param challenge daily challenge being played; exits early when null
+ */
 @Composable
 private fun PuzzleStatusRow(challenge: DailyChallenge?) {
     if (challenge == null) return  // <-- SAFETY FIX
@@ -437,6 +494,12 @@ private fun PuzzleStatusRow(challenge: DailyChallenge?) {
     }
 }
 
+/**
+ * Generic chip showing a title and subtitle.
+ *
+ * @param title primary text
+ * @param subtitle supporting text
+ */
 @Composable
 private fun StatusChip(
     title: String,
@@ -465,12 +528,25 @@ private fun StatusChip(
     }
 }
 
+/**
+ * Format seconds to mm:ss for display.
+ *
+ * @receiver total seconds remaining
+ * @return formatted string for timers
+ */
 private fun Int.asTimeDisplay(): String {
     val minutes = this / 60
     val seconds = this % 60
     return "%02d:%02d".format(minutes, seconds)
 }
 
+/**
+ * Build a random sequence of playable coordinates for the challenge.
+ *
+ * @param grid puzzle grid to pull coordinates from
+ * @param desiredLength requested sequence length
+ * @return list of board coordinates honoring disabled cells and clamped to grid size
+ */
 private fun generateSequence(
     grid: List<List<PuzzleCell>>,
     desiredLength: Int
@@ -489,10 +565,23 @@ private fun generateSequence(
     return coords.shuffled().take(length)
 }
 
+/**
+ * Mark every coordinate in the sequence as incorrect.
+ *
+ * @param sequence coordinates to flag
+ * @return map of coordinates to incorrect state
+ */
 private fun markSequenceAsIncorrect(sequence: List<BoardCoordinate>): Map<BoardCoordinate, PuzzleCellState> {
     return sequence.associateWith { PuzzleCellState.Incorrect }
 }
 
+/**
+ * Determine if the tapped cell should count as a wildcard.
+ *
+ * @param grid puzzle grid
+ * @param coord target cell coordinate
+ * @return true when the value contains "wild" (case-insensitive)
+ */
 private fun cellLooksWildcard(
     grid: List<List<PuzzleCell>>,
     coord: BoardCoordinate

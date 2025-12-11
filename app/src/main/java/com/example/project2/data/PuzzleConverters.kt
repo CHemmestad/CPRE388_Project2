@@ -7,6 +7,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 
+/** Convert app puzzle descriptor to Firestore-friendly model. */
 fun PuzzleDescriptor.toFirebase(): FirebasePuzzle {
     return FirebasePuzzle(
         id = id,
@@ -28,6 +29,12 @@ fun PuzzleDescriptor.toFirebase(): FirebasePuzzle {
     )
 }
 
+/**
+ * Convert a Firestore puzzle document into an in-app [PuzzleDescriptor].
+ *
+ * Handles enum normalization, default fallbacks for malformed data, and reconstruction
+ * of optional [MastermindConfig] values when present.
+ */
 fun FirebasePuzzle.toPuzzle(): PuzzleDescriptor {
     fun normalizeEnum(value: String): String =
         value.trim().replace("\\s+".toRegex(), "_").uppercase()

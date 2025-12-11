@@ -3,6 +3,7 @@ package com.example.project2.data
 import java.time.Duration
 import com.google.firebase.Timestamp
 
+/** Convert app progress to Firestore payload. */
 fun PuzzleProgress.toFirebase(): FirebasePuzzleProgress =
     FirebasePuzzleProgress(
         puzzleId = puzzleId,
@@ -13,6 +14,7 @@ fun PuzzleProgress.toFirebase(): FirebasePuzzleProgress =
         inProgressState = inProgressState
     )
 
+/** Convert Firestore progress document to app progress model. */
 fun FirebasePuzzleProgress.toProgress(): PuzzleProgress =
     PuzzleProgress(
         puzzleId = puzzleId,

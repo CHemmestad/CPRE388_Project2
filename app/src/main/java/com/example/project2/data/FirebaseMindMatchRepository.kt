@@ -13,17 +13,25 @@ import java.time.Instant
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.auth.ktx.auth
 
+/**
+ * Firebase-backed implementation of the MindMatch repository, responsible for
+ * loading/saving puzzles, profiles, progress, leaderboards, and daily challenges.
+ */
 class FirebaseMindMatchRepository : MindMatchRepository {
 
     private val db = Firebase.firestore
 
     // --------- Core MindMatchRepository properties ---------
 
+    /** Profile for the authenticated user; populated after [loadActiveProfile]. */
     override lateinit var activeProfile: PlayerProfile
         private set
 
+    /** Cached list of puzzles combining defaults and any fetched from Firestore. */
     private var cachedPuzzles: List<PuzzleDescriptor> = emptyList()
+    /** Cached progress keyed by puzzle id for the active user. */
     private var cachedProgress: Map<String, PuzzleProgress> = emptyMap()
+    /** Cached leaderboard entries grouped by puzzle id. */
     private var cachedLeaderboard: Map<String, List<LeaderboardEntry>> = emptyMap()
 
 
@@ -81,11 +89,15 @@ class FirebaseMindMatchRepository : MindMatchRepository {
 
 
 
+    /** Latest daily challenge placeholder until Firestore-backed daily challenges are wired up. */
     override val dailyChallenge: DailyChallenge
         get() = throw NotImplementedError("Firebase daily challenge not implemented yet.")
 
     // --------- Puzzles ---------
 
+    /**
+     * Fetch all puzzles from Firestore, merge with defaults, and cache locally.
+     */
     suspend fun loadPuzzlesFromFirebase() {
         val snapshot = db.collection("puzzles").get().await()
 
@@ -97,6 +109,11 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         cachedPuzzles = defaultPuzzles + firebasePuzzles
     }
 
+    /**
+     * Persist a puzzle descriptor to Firestore and update cache.
+     *
+     * @param puzzle domain descriptor to save
+     */
     suspend fun savePuzzleToFirebase(puzzle: PuzzleDescriptor) {
         val firebasePuzzle = puzzle.toFirebase()
 
@@ -106,6 +123,11 @@ class FirebaseMindMatchRepository : MindMatchRepository {
             .await()
     }
 
+    /**
+     * Delete a puzzle document and evict it from caches.
+     *
+     * @param puzzleId identifier of the puzzle to remove
+     */
     suspend fun deletePuzzleFromFirebase(puzzleId: String) {
         db.collection("puzzles")
             .document(puzzleId)
@@ -118,6 +140,13 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         cachedLeaderboard = cachedLeaderboard - puzzleId
     }
 
+    /**
+     * Upload a puzzle image to Firebase Storage and return its public URL.
+     *
+     * @param imageUri local URI of the image to upload
+     * @param puzzleId puzzle id used to name the storage object
+     * @return download URL as a string once the upload completes
+     */
     suspend fun uploadPuzzleImage(imageUri: android.net.Uri, puzzleId: String): String {
         val storageRef = Firebase.storage.reference
         val imageRef = storageRef.child("puzzle_images/${puzzleId}.jpg")
@@ -130,8 +159,9 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     // --------- Profile + progress ---------
 
     /**
-     * Loads the active profile from Firestore using AuthRepository,
-     * and also loads this user's puzzle progress.
+     * Load the active profile from Firestore via AuthRepository and hydrate progress.
+     *
+     * @param authRepo authentication repository providing the current user
      */
     suspend fun loadActiveProfile(authRepo: AuthRepository) {
         val userId = authRepo.getCurrentUserId()
@@ -154,8 +184,9 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
 
     /**
-     * Loads the most recent daily challenge generated and maps it to a Mastermind puzzle descriptor.
-     * Returns null if none exist or the payload is malformed.
+     * Load the most recent daily challenge document and map it to a Mastermind puzzle.
+     *
+     * @return a DailyChallenge or null if none/malformed
      */
     suspend fun loadLatestDailyChallenge(): DailyChallenge? {
         val snapshot = db.collection(DAILY_CHALLENGES_COLLECTION)
@@ -220,8 +251,9 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
 
     /**
-     * Reads all puzzle progress documents for a given user:
-     * users/{userId}/progress/{puzzleId}
+     * Read all progress documents for the user and cache them by puzzle id.
+     *
+     * @param userId Firebase auth uid whose progress should be loaded
      */
     suspend fun loadProgressForUser(userId: String) {
         val snapshot = db.collection("users")
@@ -236,8 +268,10 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
 
     /**
-     * Saves or updates progress for a single puzzle for this user.
-     * users/{userId}/progress/{puzzleId}
+     * Save/update progress for a puzzle and refresh the cache.
+     *
+     * @param userId Firebase auth uid
+     * @param progress progress state to persist
      */
     suspend fun saveProgress(userId: String, progress: PuzzleProgress) {
         val firebaseProgress = progress.toFirebase()
@@ -256,8 +290,11 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
 
     /**
-     * Records that a puzzle was played at a given time for the active user.
-     * Stores under users/{userId}/puzzlesPlayed map in Firestore and updates cache.
+     * Record a puzzle play timestamp for a user and update the active profile cache.
+     *
+     * @param userId Firebase auth uid
+     * @param puzzleId id of the puzzle that was played
+     * @param playedAt timestamp when the play occurred (defaults to now)
      */
     suspend fun recordPuzzlePlayed(userId: String, puzzleId: String, playedAt: Timestamp = Timestamp.now()) {
         db.collection("users")
@@ -276,6 +313,11 @@ class FirebaseMindMatchRepository : MindMatchRepository {
 
 
 
+    /**
+     * Load available puzzle types from Firestore.
+     *
+     * @return list of puzzle type names
+     */
     suspend fun loadPuzzleTypes(): List<String> {
         val snapshot = db.collection("puzzleTypes").get().await()
         return snapshot.documents.mapNotNull { doc ->
@@ -284,8 +326,9 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
 
     /**
-     * Convenience helper for developers: seed puzzleTypes collection if empty.
-     * Call this from a one-off debug action; do NOT leave it on a hot path.
+     * Seed default puzzle types if the collection is empty (dev helper).
+     *
+     * @param defaults names to insert when no puzzle types exist
      */
     suspend fun seedPuzzleTypesIfEmpty(
         defaults: List<String> = listOf("Mastermind", "Color Match", "Jigsaw")
@@ -307,6 +350,11 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
     // ------- LEADERBOARD -------
 
+    /**
+     * Load leaderboard entries from Firestore and group them by puzzle id.
+     *
+     * Caches the top 20 scores per puzzle for quick access.
+     */
     suspend fun loadLeaderboard() {
         val snapshot = db.collection("leaderboard")
             .get()
@@ -326,7 +374,11 @@ class FirebaseMindMatchRepository : MindMatchRepository {
     }
 
     /**
-     * Add a new leaderboard entry for a puzzle.
+     * Add a leaderboard entry for a puzzle and refresh the cached leaderboard.
+     *
+     * @param puzzleId target puzzle id for the leaderboard
+     * @param playerName display name to record
+     * @param score higher is better; meaning depends on puzzle type
      */
     suspend fun submitLeaderboardEntry(
         puzzleId: String,
@@ -348,6 +400,12 @@ class FirebaseMindMatchRepository : MindMatchRepository {
         loadLeaderboard()
     }
 
+    /**
+     * Add a leaderboard entry for a jigsaw completion time and refresh leaderboard.
+     *
+     * @param timeInSeconds completion time for the puzzle
+     * @param gridSize dimension of the jigsaw grid used to infer difficulty
+     */
     suspend fun saveJigsawScore(timeInSeconds: Long, gridSize: Int) {
         val auth = com.google.firebase.ktx.Firebase.auth
         val currentUser = auth.currentUser ?: return

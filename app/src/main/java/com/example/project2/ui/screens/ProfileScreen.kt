@@ -36,6 +36,17 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.project2.data.PlayerProfile
 import com.example.project2.data.PuzzleDescriptor
 
+/**
+ * Player profile management screen with editing, account actions, and user puzzle list.
+ *
+ * @param profile active player profile; renders a loading state when null
+ * @param userPuzzles puzzles created by the user
+ * @param modifier layout modifier passed from parent
+ * @param onDeletePuzzle callback when a user-owned puzzle is removed
+ * @param onSaveProfile persists updated display name and bio
+ * @param onDeleteAccount invoked when the profile is deleted
+ * @param onLogout sign-out callback
+ */
 @Composable
 fun ProfileScreen(
     profile: PlayerProfile?,
@@ -48,6 +59,7 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     if (profile == null) {
+        // Defer rendering until profile is available to avoid null crashes.
         Text(
             text = "Loading profile...",
             modifier = modifier.padding(16.dp),
@@ -99,6 +111,7 @@ fun ProfileScreen(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            // Simple avatar: first initial or fallback question mark.
                             Text(
                                 text = displayName.firstOrNull()?.uppercase() ?: "?",
                                 style = MaterialTheme.typography.headlineMedium
@@ -192,22 +205,22 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            Button(onClick = {
-                                onDeletePuzzle(puzzle)
-                                Toast.makeText(context, "Puzzle deleted", Toast.LENGTH_SHORT).show()
-                            }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Delete puzzle")
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Delete")
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(onClick = {
+                            onDeletePuzzle(puzzle)
+                            Toast.makeText(context, "Puzzle deleted", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete puzzle")
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete")
                         }
                     }
                 }
             }
         }
     }
+}
 }

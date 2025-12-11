@@ -17,6 +17,13 @@ import androidx.compose.ui.unit.dp
 import com.example.project2.data.DailyChallenge
 import com.example.project2.ui.util.formatAsDisplay
 
+/**
+ * Summary screen for the daily challenge with a call-to-action to start playing.
+ *
+ * @param challenge current daily challenge data; renders placeholders when null
+ * @param modifier layout modifier passed from parent
+ * @param onStartChallenge invoked when the user taps the start button with a non-null challenge
+ */
 @Composable
 fun DailyChallengeScreen(
     challenge: DailyChallenge?,
@@ -46,6 +53,7 @@ fun DailyChallengeScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Show puzzle metadata when available; UI stays mounted even while loading.
                 if (challenge != null) {
                     Text(
                         text = challenge.puzzle.title,

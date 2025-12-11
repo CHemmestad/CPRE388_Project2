@@ -23,6 +23,17 @@ import com.example.project2.data.PuzzleProgress
 import com.example.project2.ui.util.formatAsDisplay
 import java.time.Instant
 
+/**
+ * Reusable card for displaying puzzle metadata, progress, and an action CTA.
+ *
+ * @param puzzle puzzle descriptor to render
+ * @param modifier layout modifier passed from parent
+ * @param progress optional progress to show best score and level info
+ * @param lastPlayed optional timestamp for recency text
+ * @param actionIcon optional icon for the CTA
+ * @param actionText label for the CTA button
+ * @param onActionClick invoked when CTA is tapped
+ */
 @Composable
 fun PuzzleCard(
     puzzle: PuzzleDescriptor,

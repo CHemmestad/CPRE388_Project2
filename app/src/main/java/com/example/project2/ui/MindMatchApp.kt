@@ -100,6 +100,12 @@ enum class MindMatchDestination(
     Profile("profile", "Profile", Icons.Filled.Person)
 }
 
+/**
+ * App root composable wiring navigation, auth gates, and top-level chrome.
+ *
+ * @param modifier layout modifier passed from parent
+ * @param providedViewModel optional view model for previews/tests
+ */
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -336,6 +342,13 @@ fun MindMatchApp(
 }
 
 
+/**
+ * Bottom navigation bar for top-level destinations.
+ *
+ * @param destinations available top-level routes
+ * @param currentDestination current nav destination
+ * @param onNavigate handler for destination selection
+ */
 @Composable
 private fun MindMatchNavigationBar(
     destinations: Array<MindMatchDestination>,
@@ -366,11 +379,13 @@ private fun MindMatchNavigationBar(
     }
 }
 
+/** Helper to check if the destination matches the current hierarchy. */
 @Composable
 private fun NavDestination?.isDestinationInHierarchy(destination: MindMatchDestination): Boolean {
     return this?.hierarchy?.any { it.route == destination.route } == true
 }
 
+/** Human-readable label for a nav destination, with dashboard fallback. */
 private fun textForDestination(destination: NavDestination?): String {
     val fallback = MindMatchDestination.Dashboard.label
     return destination?.route?.let { route ->
@@ -378,6 +393,11 @@ private fun textForDestination(destination: NavDestination?): String {
     } ?: fallback
 }
 
+/**
+ * Authentication navigation host for login, signup, and secret admin route.
+ *
+ * @param onAuthenticated callback when login/signup succeeds
+ */
 @Composable
 private fun AuthNavHost(
     onAuthenticated: () -> Unit

@@ -6,19 +6,25 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Repository abstraction for MindMatch data sources.
- * Replace the fake implementation with Firebase/local persistence later.
+ * Contract for loading and persisting MindMatch data such as puzzles, progress, leaderboards,
+ * and the daily challenge. Implementations may be backed by Firebase, local storage, or test fakes.
  */
 interface MindMatchRepository {
+    /** Currently active player profile. */
     val activeProfile: PlayerProfile
+    /** Daily challenge content. */
     val dailyChallenge: DailyChallenge
+    /** All available puzzles. */
     val puzzles: List<PuzzleDescriptor>
+    /** Progress map keyed by puzzle id. */
     val progressByPuzzle: Map<String, PuzzleProgress>
+    /** Leaderboard entries grouped by puzzle id. */
     val leaderboard: Map<String, List<LeaderboardEntry>>
 }
 
 /**
- * Fake implementation of [MindMatchRepository] that returns hardcoded data.
+ * Fake implementation of [MindMatchRepository] used for previews or offline development.
+ * Provides deterministic, hardcoded data without any remote dependencies.
  */
 class FakeMindMatchRepository : MindMatchRepository {
     override val activeProfile: PlayerProfile = PlayerProfile(displayName = "Avery")
@@ -107,6 +113,12 @@ class FakeMindMatchRepository : MindMatchRepository {
     )
 }
 
+/**
+ * Parse a JSON blob into [DailyPuzzleContent] for the Prism Pulse relay demo.
+ *
+ * @param json serialized daily puzzle payload
+ * @return fully hydrated [DailyPuzzleContent] used by [FakeMindMatchRepository]
+ */
 private fun parseDailyPuzzleContent(json: String): DailyPuzzleContent {
     val root = JSONObject(json)
     val instructions = root.optString("instructions")
@@ -155,9 +167,11 @@ private fun parseDailyPuzzleContent(json: String): DailyPuzzleContent {
     )
 }
 
+/** Map a nullable string to a [PuzzleCellState], defaulting to Neutral when unknown. */
 private fun String?.toPuzzleCellState(): PuzzleCellState =
     PuzzleCellState.entries.firstOrNull { it.name.equals(this, ignoreCase = true) } ?: PuzzleCellState.Neutral
 
+/** Sample JSON used to seed the fake daily challenge content. */
 private val PRISM_PULSE_JSON = """
 {
   "instructions": "You're calibrating the Prism Pulse Relay. Tap the tiles in the sequence that matches today's beam path. After every perfect chain the grid morphs--adapt fast, keep your accuracy streak alive, and rack up the most luminous combo before the relay cools.",

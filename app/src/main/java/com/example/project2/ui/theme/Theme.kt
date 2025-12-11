@@ -56,6 +56,13 @@ private val LightColorScheme = lightColorScheme(
     outline = CoolGray
 )
 
+/**
+ * App-wide Material3 theme using custom brand colors with optional dynamic colors.
+ *
+ * @param darkTheme whether to force dark mode (defaults to system)
+ * @param dynamicColor enable Android 12 dynamic color harmonization
+ * @param content themed composable content
+ */
 @Composable
 fun Project2Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),

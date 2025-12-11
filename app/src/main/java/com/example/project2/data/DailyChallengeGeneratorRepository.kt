@@ -25,6 +25,9 @@ data class DailyChallengeGenerationResult(
     val rawJson: String
 )
 
+/**
+ * Generates daily challenge JSON via Gemini and persists the result to Firestore.
+ */
 class DailyChallengeGeneratorRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -35,6 +38,12 @@ class DailyChallengeGeneratorRepository(
         .build()
 ) {
 
+    /**
+     * Generate a challenge from Gemini and save the payload to Firestore.
+     *
+     * @param prompt structured prompt text for Gemini
+     * @return id of the stored document and the raw JSON returned
+     */
     suspend fun generateAndStore(prompt: String): DailyChallengeGenerationResult {
         val trimmedPrompt = prompt.trim()
         require(trimmedPrompt.isNotBlank()) { "Prompt must not be blank" }
@@ -49,6 +58,9 @@ class DailyChallengeGeneratorRepository(
         )
     }
 
+    /**
+     * Call Gemini generateContent with the provided prompt text.
+     */
     private suspend fun requestGemini(prompt: String): String = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY
         require(apiKey.isNotBlank()) { "Missing GEMINI_API_KEY in local.properties." }
@@ -98,6 +110,9 @@ class DailyChallengeGeneratorRepository(
         }
     }
 
+    /**
+     * Parse Gemini response JSON and extract the generated text payload.
+     */
     private fun extractJsonPayload(rawResponse: String): JSONObject {
         val root = JSONObject(rawResponse)
         val content = root.optJSONArray("candidates")
@@ -116,6 +131,9 @@ class DailyChallengeGeneratorRepository(
         return JSONObject(cleaned)
     }
 
+    /**
+     * Persist the generated JSON to Firestore, overwriting previous daily challenges.
+     */
     private suspend fun saveToFirestore(prompt: String, jsonObject: JSONObject): String {
         val data = hashMapOf<String, Any?>(
             "prompt" to prompt,
@@ -136,6 +154,7 @@ class DailyChallengeGeneratorRepository(
         return "current"
     }
 
+    /** Convert a JSONObject to a Kotlin Map recursively. */
     private fun JSONObject.toMap(): Map<String, Any?> {
         val result = mutableMapOf<String, Any?>()
         val keysIterator = keys()
@@ -152,6 +171,7 @@ class DailyChallengeGeneratorRepository(
         return result
     }
 
+    /** Convert a JSONArray to a Kotlin List recursively. */
     private fun JSONArray.toList(): List<Any?> {
         val list = mutableListOf<Any?>()
         for (index in 0 until length()) {
@@ -177,6 +197,12 @@ class DailyChallengeGeneratorRepository(
     }
 }
 
+/**
+ * Strip Markdown code fences from the model output.
+ *
+ * @param rawContent Gemini text response
+ * @return cleaned JSON string without fences
+ */
 private fun removeCodeFences(rawContent: String): String {
     var result = rawContent.trim()
     if (result.startsWith("```")) {
